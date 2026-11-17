@@ -1,0 +1,121 @@
+Licencia de Uso Libre de Shakes
+Shakes Free-Use Source-Available License, versión 2.0
+
+Copyright (c) 2026 iamjuaness. Todos los derechos reservados salvo los
+concedidos expresamente en esta licencia.
+
+Shakes (el «Software») incluye su código fuente, instaladores, iconos, nombre,
+logotipo, ejemplos y documentación. El titular conserva los derechos de autor
+sobre el Software. Esta licencia permite usarlo, estudiarlo, modificarlo y
+redistribuirlo, con una condición central: SIEMPRE DEBE SER GRATUITO.
+
+1. PERMISOS
+
+Se concede a cualquier persona una licencia mundial, gratuita, no exclusiva
+y revocable (solo por incumplimiento, ver sección 6) para:
+
+a) Usar el Software para cualquier fin, personal, educativo o comercial
+   (por ejemplo, escribir y publicar o vender tus propias obras).
+b) Leer y estudiar el código fuente.
+c) Modificar el Software.
+d) Copiar y redistribuir el Software, original o modificado, siempre que
+   se cumplan las condiciones de la sección 2.
+
+2. CONDICIONES DE DISTRIBUCIÓN
+
+Quien distribuya el Software, original o modificado, debe:
+
+a) Hacerlo de forma gratuita: sin cobrar por el Software, por sus copias,
+   por su descarga, por su acceso ni por su hospedaje, y sin suscripciones,
+   paywalls, anuncios, rastreo ni ninguna otra forma de monetizar su
+   distribución. Tampoco puede incluirlo en un producto o servicio de pago
+   donde el Software aporte valor sustancial.
+b) Incluir esta licencia completa y conservar los avisos de autoría.
+c) Licenciar bajo estos mismos términos cualquier versión modificada o
+   derivada, y entregar su código fuente.
+d) Indicar claramente qué cambios hizo y que la versión es modificada y no
+   es la oficial.
+e) Dar a su versión modificada un nombre e icono distintos de «Shakes» y de
+   su logotipo (puede decir «basado en Shakes», con enlace al repositorio
+   oficial https://github.com/iamjuaness/Shakes).
+
+3. PROHIBICIONES
+
+Queda prohibido:
+
+a) Vender, alquilar, sublicenciar, ofrecer por suscripción o prestar como
+   servicio de pago el Software, sus copias o versiones modificadas.
+b) Cobrar por soporte, alojamiento o consultoría cuyo valor provenga
+   sustancialmente del Software.
+c) Presentar el Software, o una versión alterada, como propio, o eliminar,
+   ocultar o modificar los avisos de autoría y esta licencia.
+d) Suplantar a Shakes: usar su nombre, logotipo o icono, o algo que pueda
+   confundirse con ellos, para una versión alterada, o para instaladores,
+   tiendas de aplicaciones y sitios web que imiten al original.
+e) Distribuir versiones con código malicioso, publicidad, rastreo o
+   funcionalidades ocultas presentándolas como Shakes.
+f) Relicenciar el Software bajo términos más restrictivos o que permitan
+   cobrar por él.
+
+4. TUS OBRAS SON TUYAS
+
+Todo lo que cualquier persona escriba, cree, importe o exporte con Shakes
+pertenece exclusivamente a esa persona y a nadie más. Esto incluye textos,
+manuscritos, escenas, fichas, mapas, notas, versiones, archivos de proyecto
+(`.shks`), exportaciones (Markdown, Word, EPUB, PDF) y los plugins que
+cree.
+
+El titular, los distribuidores y los colaboradores del Software:
+a) no adquieren ningún derecho, licencia, propiedad ni acceso sobre ese
+   contenido;
+b) no pueden reclamar autoría, regalías ni participación sobre él;
+c) no pueden usarlo para ningún fin, incluido entrenar sistemas de
+   inteligencia artificial, sin permiso expreso de su autor.
+
+Esta licencia no limita lo que haces con tus obras: puedes publicarlas,
+venderlas o licenciarlas como quieras. Los ejemplos incluidos en el
+repositorio (`ejemplos/`) son parte del Software y se rigen por esta
+licencia.
+
+5. PROPIEDAD
+
+El Software se licencia, no se vende. Ninguna disposición de esta licencia
+transfiere al usuario la titularidad del Software, de su nombre ni de su
+logotipo, salvo los derechos expresamente concedidos.
+
+6. TERMINACIÓN
+
+Esta licencia termina automáticamente para quien incumpla cualquiera de sus
+condiciones. Debe entonces dejar de distribuir el Software y eliminar las
+copias no conformes. Los derechos se recuperan si el incumplimiento se
+corrige en 30 días desde que el titular lo notifique por primera vez. El
+titular podrá reclamar daños y perjuicios y pedir la retirada de las copias
+o suplantaciones. La sección 4 sobrevive a la terminación.
+
+7. CONTRIBUCIONES
+
+Si envías código, correcciones o ideas al repositorio oficial, concedes al
+titular una licencia perpetua, mundial, gratuita e irrevocable para usarlas,
+modificarlas y distribuirlas como parte del Software, bajo esta licencia, y
+declaras que tienes derecho a hacerlo. Conservas la autoría de tu
+aportación.
+
+8. SIN GARANTÍA
+
+EL SOFTWARE SE ENTREGA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O
+IMPLÍCITA, INCLUIDAS LAS DE COMERCIABILIDAD, IDONEIDAD PARA UN FIN
+PARTICULAR Y NO INFRACCIÓN. EL TITULAR NO SERÁ RESPONSABLE DE NINGUNA
+RECLAMACIÓN, DAÑO O PÉRDIDA DE DATOS DERIVADOS DEL USO DEL SOFTWARE. HAZ
+COPIAS DE SEGURIDAD DE TUS PROYECTOS.
+
+9. TERCEROS
+
+El Software incluye componentes de código abierto (React, Tauri, TipTap,
+fflate, entre otros) que se rigen por sus propias licencias; esta licencia no
+las modifica.
+
+10. CONTACTO
+
+Para pedir permisos distintos a los aquí concedidos (por ejemplo, una
+licencia comercial): abre un issue en
+https://github.com/iamjuaness/Shakes/issues.

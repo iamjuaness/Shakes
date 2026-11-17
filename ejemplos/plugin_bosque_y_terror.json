@@ -1,0 +1,24 @@
+{
+  "shakes": 1,
+  "id": "bosque-y-terror",
+  "name": "Bosque y Terror",
+  "version": "1.0.0",
+  "description": "Tema verde y herramientas para relato de terror.",
+  "themes": [
+    {
+      "name": "Bosque",
+      "light": { "--bg": "#f4f7f2", "--panel": "#e8efe4", "--accent": "#2f6b3f", "--accent-soft": "#d5e6d4", "--line": "#d3ddcf" },
+      "dark": { "--bg": "#10150f", "--surface": "#171d16", "--panel": "#151b14", "--accent": "#7fc28a", "--accent-soft": "#223024", "--on-accent": "#0e140d", "--line": "#2a3528" }
+    }
+  ],
+  "structures": [
+    { "name": "Relato de terror", "parts": [
+      { "title": "Relato", "chapters": ["Normalidad", "Primer indicio", "Escalada", "Revelación", "Confrontación", "Final inquietante"] } ] }
+  ],
+  "sceneTemplates": [
+    { "name": "Escena de tensión", "genre": "Terror",
+      "html": "<h2>Escena de tensión</h2><p><em>Lugar y hora:</em> </p><p><em>Qué amenaza se percibe (sin mostrarla):</em> </p><p><em>Detalle sensorial fuera de lugar:</em> </p><p><em>Gesto del personaje que delata su miedo:</em> </p><p></p>" },
+    { "name": "Diálogo con subtexto", "genre": "General",
+      "html": "<p>— </p><p>— </p><blockquote><p>Lo que ninguno dice:</p></blockquote>" }
+  ]
+}
