@@ -1,0 +1,37 @@
+{
+  "shakes": 1,
+  "id": "estructura-snowflake",
+  "name": "Snowflake (copo de nieve)",
+  "version": "1.0.0",
+  "description": "Método Snowflake de Randy Ingermanson, versión corta.",
+  "structures": [
+    {
+      "name": "Snowflake",
+      "parts": [
+        {
+          "title": "Premisa",
+          "chapters": [
+            "Frase resumen",
+            "Párrafo de cinco frases"
+          ]
+        },
+        {
+          "title": "Personajes",
+          "chapters": [
+            "Ficha de protagonista",
+            "Ficha de antagonista",
+            "Ficha de aliados"
+          ]
+        },
+        {
+          "title": "Desarrollo",
+          "chapters": [
+            "Sinopsis de una página",
+            "Lista de escenas",
+            "Primer borrador"
+          ]
+        }
+      ]
+    }
+  ]
+}

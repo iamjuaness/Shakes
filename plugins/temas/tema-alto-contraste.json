@@ -1,0 +1,34 @@
+{
+  "shakes": 1,
+  "id": "tema-alto-contraste",
+  "name": "Alto contraste",
+  "version": "1.0.0",
+  "description": "Máximo contraste para accesibilidad.",
+  "themes": [
+    {
+      "name": "Alto contraste",
+      "light": {
+        "--bg": "#ffffff",
+        "--surface": "#ffffff",
+        "--panel": "#f0f0f0",
+        "--text": "#000000",
+        "--muted": "#3a3a3a",
+        "--accent": "#0000cc",
+        "--accent-soft": "#dde4ff",
+        "--on-accent": "#fff",
+        "--line": "#000000"
+      },
+      "dark": {
+        "--bg": "#000000",
+        "--surface": "#000000",
+        "--panel": "#111111",
+        "--text": "#ffffff",
+        "--muted": "#d0d0d0",
+        "--accent": "#ffff00",
+        "--accent-soft": "#333300",
+        "--on-accent": "#000000",
+        "--line": "#ffffff"
+      }
+    }
+  ]
+}

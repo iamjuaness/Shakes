@@ -80,7 +80,7 @@ Hay un proyecto de ejemplo en [`ejemplos/La_ultima_farola.shks`](ejemplos/La_ult
 
 ## Plugins
 
-Un plugin es un archivo JSON que **no ejecuta código**: solo aporta datos validados. Se instala desde la pestaña **Plugins**.
+Un plugin es un archivo JSON. Los de temas y estructuras **no ejecutan código**: solo aportan datos validados. Los de herramientas (`"tool": "id"`) activan código que ya viene incluido en la app (carpeta [`plugins/herramientas`](plugins/herramientas)); un JSON nunca trae código propio. Todo se instala desde la pestaña **Plugins**, que también lista los de la carpeta [`plugins/`](plugins/README.md).
 
 ```json
 {
@@ -111,7 +111,7 @@ Un plugin es un archivo JSON que **no ejecuta código**: solo aporta datos valid
 | `structures` | Aparecen en **Añadir plantilla…** junto a las integradas. |
 | `sceneTemplates` | Botón **Plantilla de escena…**: inserta el HTML al final de la escena. Solo se conservan etiquetas de texto (`p`, `h1-h6`, `em`, `strong`, `i`, `b`, `ul`, `ol`, `li`, `blockquote`, `br`), sin atributos. |
 
-Ejemplo completo: [`ejemplos/plugin_bosque_y_terror.json`](ejemplos/plugin_bosque_y_terror.json).
+Ejemplo completo: [`plugins/temas/bosque_y_terror.json`](plugins/temas/bosque_y_terror.json).
 
 ## Desarrollo
 
@@ -150,7 +150,7 @@ npx tsc --noEmit
 ## Publicar una versión
 
 1. Sube la versión en `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json` (las tres iguales).
-2. `git tag v0.1.0 && git push origin v0.1.0`.
+2. `git tag v0.2.0 && git push origin v0.2.0`.
 
 El CI compila el instalador y lo adjunta al release.
 
@@ -158,8 +158,7 @@ El CI compila el instalador y lo adjunta al release.
 
 - IA con memoria de la historia y detector de inconsistencias.
 - Publicación integrada.
-- Plugins con código (comandos, exportadores) en un entorno aislado.
-- Tipografías en temas de plugins.
+- Plugins de terceros con código propio, en un entorno aislado.
 
 ## Licencia
 

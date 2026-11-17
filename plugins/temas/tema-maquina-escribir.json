@@ -1,0 +1,38 @@
+{
+  "shakes": 1,
+  "id": "tema-maquina-escribir",
+  "name": "Máquina de escribir",
+  "version": "1.0.0",
+  "description": "Papel claro y tipografía monoespaciada.",
+  "themes": [
+    {
+      "name": "Máquina de escribir",
+      "light": {
+        "--bg": "#f2efe6",
+        "--surface": "#faf8f1",
+        "--panel": "#e8e4d6",
+        "--text": "#222222",
+        "--muted": "#777777",
+        "--accent": "#a02020",
+        "--accent-soft": "#ecd8d0",
+        "--on-accent": "#fff",
+        "--line": "#d6d0bd",
+        "--font": "Courier New, Courier, monospace",
+        "--radius": "2px"
+      },
+      "dark": {
+        "--bg": "#1b1b1b",
+        "--surface": "#222222",
+        "--panel": "#161616",
+        "--text": "#d8d4c8",
+        "--muted": "#8a8a8a",
+        "--accent": "#e06060",
+        "--accent-soft": "#3a2222",
+        "--on-accent": "#111",
+        "--line": "#333333",
+        "--font": "Courier New, Courier, monospace",
+        "--radius": "2px"
+      }
+    }
+  ]
+}

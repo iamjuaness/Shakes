@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "maquina-escribir",
+  "name": "Máquina de escribir",
+  "version": "1.0.0",
+  "description": "Mantiene la línea que escribes en el centro de la pantalla.",
+  "tool": "maquina-escribir"
+}

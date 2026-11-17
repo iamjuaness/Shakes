@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "calendario",
+  "name": "Calendario",
+  "version": "1.0.0",
+  "description": "Vista mensual con las escenas según su fecha.",
+  "tool": "calendario"
+}

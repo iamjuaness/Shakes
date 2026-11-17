@@ -8,9 +8,11 @@ import { DialogHost, ask, choose, confirmAsk } from "./dialog";
 import { idbGet, idbSet } from "./store";
 import { PluginState, activeTheme, allSceneTemplates, allStructures, themeCss } from "./plugins";
 import { PluginsPanel } from "./PluginsPanel";
+import { ESSENTIAL, TOOLS, catalog } from "../plugins/index";
+import type { ToolHost, ToolPlugin } from "../plugins/herramientas/types";
 import "./App.css";
 
-type Tab = "book" | "cork" | "cards" | "timeline" | "map" | "style" | "search" | "versions" | "plugins";
+type Tab = string; // pestaña fija o id de una herramienta con Panel
 const TABS: [Tab, string][] = [["book", "Manuscrito"], ["cork", "Corcho"], ["cards", "Fichas"], ["timeline", "Línea"], ["map", "Mapa"], ["style", "Estilo"], ["search", "Buscar"], ["versions", "Versiones"], ["plugins", "Plugins"]];
 
 // File System Access API (Chromium/WebView2): sin plugin Rust.
@@ -25,13 +27,16 @@ function saveBlob(name: string, blob: Blob) {
   URL.revokeObjectURL(a.href);
 }
 
-function SceneEditor({ html, onChange }: { html: string; onChange: (html: string) => void }) {
+function SceneEditor({ html, onChange, tools, host }: { html: string; onChange: (html: string) => void; tools: ToolPlugin[]; host: ToolHost }) {
+  const hostRef = useRef(host);
+  hostRef.current = host;
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, ...tools.flatMap((t) => t.extensions?.(() => hostRef.current) ?? [])],
     content: html,
     autofocus: "end",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+  useEffect(() => { if (editor) tools.forEach((t) => t.refresh?.(editor)); }, [editor, host.cards]); // eslint-disable-line react-hooks/exhaustive-deps
   const btn = (label: string, title: string, active: boolean, run: () => void) => (
     <button key={title} title={title} className={active ? "on" : ""} onMouseDown={(e) => { e.preventDefault(); run(); }}>{label}</button>
   );
@@ -53,12 +58,15 @@ function SceneEditor({ html, onChange }: { html: string; onChange: (html: string
           {btn("↷", "Rehacer", false, () => c().redo().run())}
         </div>
       )}
-      <EditorContent editor={editor} className="editor" />
+      <div className="editor-row">
+        <EditorContent editor={editor} className="editor" />
+        {editor && tools.map((t) => t.Overlay && <t.Overlay key={t.id} editor={editor} host={host} />)}
+      </div>
     </>
   );
 }
 
-export default function App({ initial, handle: savedHandle, granted }: { initial: Project; handle: any; granted: boolean }) {
+export default function App({ initial, handle: savedHandle, granted, onNew }: { initial: Project; handle: any; granted: boolean; onNew: () => void }) {
   const [project, setProject] = useState<Project>(initial);
   const { book, cards, goal } = project;
   const setBook = (f: (b: Node) => Node) => setProject((p) => ({ ...p, book: f(p.book) }));
@@ -72,6 +80,7 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
   const [fileName, setFileName] = useState("");
   const [status, setStatus] = useState("");
   const [warn, setWarn] = useState("");
+  const flash = (m: string) => { setWarn(m); setTimeout(() => setWarn((w) => (w === m ? "" : w)), 6000); }; // avisos de plugins: se borran solos
   const handle = useRef<any>(granted ? savedHandle : null);
   const [pending, setPending] = useState<any>(savedHandle && !granted ? savedHandle : null); // handle que falta autorizar tras reiniciar
   useEffect(() => { if (handle.current) setFileName(handle.current.name); }, []);
@@ -116,7 +125,11 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
   // Plugins: globales de la app (no van en el .shks). Su tema se inyecta como <style> al final del <head>.
   const [plug, setPlug] = useState<PluginState>({ plugins: [], theme: null });
   const plugLoaded = useRef(false);
-  useEffect(() => { idbGet<PluginState>("plugins").then((s) => { if (s) setPlug(s); }).catch(() => {}).finally(() => { plugLoaded.current = true; }); }, []);
+  useEffect(() => { idbGet<PluginState>("plugins").then((s) => {
+    if (s) return setPlug(s);
+    // Primera vez: se instalan los esenciales; el resto queda en «Disponibles».
+    setPlug({ plugins: catalog.filter((c) => ESSENTIAL.includes(c.id)), theme: null });
+  }).catch(() => {}).finally(() => { plugLoaded.current = true; }); }, []);
   useEffect(() => {
     if (plugLoaded.current) idbSet("plugins", plug).catch(() => setWarn("⚠ No se pudieron guardar los plugins."));
     let el = document.getElementById("shakes-plugin-theme");
@@ -125,6 +138,9 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
   }, [plug]);
   const structures = [...TEMPLATES, ...allStructures(plug)];
   const sceneTpls = allSceneTemplates(plug);
+  const tools = TOOLS.filter((t) => plug.plugins.some((p) => p.tool === t.id)); // herramientas instaladas
+  const tabs: [Tab, string][] = [...TABS.filter(([k]) => k !== "plugins"), ...tools.filter((t) => t.Panel).map((t): [Tab, string] => [t.id, t.name]), ["plugins", "Plugins"]]; // Plugins siempre al final
+  const ToolPanel = tools.find((t) => t.id === tab)?.Panel;
 
   function load(p: Project, name: string) {
     setFileName(name);
@@ -187,6 +203,7 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
   const words = totalWords(book);
   const patchCard = (id: string, patch: Partial<Card>) => setCards((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   const openScene = (id: string) => { setSelected(id); setTab("book"); };
+  const host: ToolHost = { project, setProject, openScene, notify: setStatus, cards, addCard: (c) => setCards((cs) => [...cs, c]), patchCard, openCard: (id) => { setCardId(id); setTab("cards"); } };
 
   async function exportAs(kind: "md" | "docx" | "epub" | "pdf", el: HTMLElement) {
     el.closest("details")?.removeAttribute("open");
@@ -233,12 +250,83 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
   return (
     <div className={`app ${focus ? "focus" : ""}`}>
       <DialogHost />
-      <aside className="sidebar">
+      <nav className="topbar">
         <div className="tabs" role="tablist">
-          {TABS.map(([k, l]) => (
+          {tabs.map(([k, l]) => (
             <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => { setTab(k); if (k === "map") setCardId(null); }}>{l}</button>
           ))}
         </div>
+        <div className="ribbon">
+          <div className="rgroup">
+            <div className="rbtns">
+              <button onClick={onNew}>Nuevo</button>
+              <button onClick={openFile}>Abrir</button>
+              <button onClick={saveAs}>Guardar como…</button>
+              <details className="menu">
+                <summary>Exportar ▾</summary>
+                <div>
+                  {([["md", "Markdown (.md)"], ["docx", "Word (.docx)"], ["epub", "EPUB (.epub)"], ["pdf", "PDF (imprimir)"]] as const).map(([k, l]) => (
+                    <button key={k} onClick={(e) => exportAs(k, e.currentTarget)}>{l}</button>
+                  ))}
+                </div>
+              </details>
+            </div>
+            <span className="rlabel">Archivo</span>
+          </div>
+          <div className="rgroup">
+            <div className="rbtns">
+              {tab !== "cards" && tab !== "map" && <button onClick={addTemplate}>Estructura…</button>}
+              {tab === "book" && current?.kind === "scene" && sceneTpls.length > 0 && <button onClick={addSceneTemplate}>Plantilla de escena…</button>}
+              {(tab === "cards" || tab === "map") && <button onClick={() => host.addCard({ id: crypto.randomUUID(), type: "Personaje", name: "Nueva ficha", notes: "" })}>+ Ficha</button>}
+            </div>
+            <span className="rlabel">Insertar</span>
+          </div>
+          {tab === "book" && current?.kind === "scene" && (
+            <div className="rgroup">
+              <div className="rbtns">
+                <input type="date" className="date" aria-label="Fecha de la escena" value={current.date ?? ""}
+                  onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, date: e.target.value })))} />
+                <input type="number" min={0} className="goal" aria-label="Meta de palabras de la escena" placeholder="Meta" value={current.goal || ""}
+                  onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, goal: Math.max(0, Math.floor(Number(e.target.value))) || undefined })))} />
+              </div>
+              <span className="rlabel">Escena</span>
+            </div>
+          )}
+          <div className="rgroup">
+            <div className="rbtns">
+              <button onClick={async () => {
+                const g = Number(await ask("Meta de palabras del libro (0 = sin meta)", String(goal)));
+                if (Number.isFinite(g) && g >= 0) setProject((p) => ({ ...p, goal: Math.floor(g) }));
+              }}>{goal > 0 ? `Meta: ${goal} palabras` : "Fijar meta"}</button>
+            </div>
+            <span className="rlabel">Proyecto</span>
+          </div>
+          {tools.some((t) => t.actions?.length) && (
+            <div className="rgroup">
+              <div className="rbtns">
+                <details className="menu">
+                  <summary>Herramientas ▾</summary>
+                  <div>
+                    {tools.flatMap((t) => (t.actions ?? []).map((a) => (
+                      <button key={t.id + a.label} onClick={async (e) => { e.currentTarget.closest("details")?.removeAttribute("open"); await a.run(host); }}>{a.label}</button>
+                    )))}
+                  </div>
+                </details>
+              </div>
+              <span className="rlabel">Plugins</span>
+            </div>
+          )}
+          <div className="rgroup">
+            <div className="rbtns">
+              <button onClick={() => setFocus(!focus)}>{focus ? "Salir" : "Concentración"}</button>
+              <button onClick={() => setDark(!dark)}>{dark ? "Claro" : "Oscuro"}</button>
+            </div>
+            <span className="rlabel">Vista</span>
+          </div>
+        </div>
+      </nav>
+      <div className="body">
+      <aside className="sidebar">
         {tab !== "cards" && tab !== "map" ? (
           <Tree
             book={book}
@@ -276,49 +364,18 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
             </ul>
           </div>
         )}
-        <footer>
-          {goal > 0 && <progress value={Math.min(words, goal)} max={goal} />}
-          <button onClick={async () => {
-            const g = Number(await ask("Meta de palabras del libro (0 = sin meta)", String(goal)));
-            if (Number.isFinite(g) && g >= 0) setProject((p) => ({ ...p, goal: Math.floor(g) }));
-          }}>{goal > 0 ? `Meta: ${goal} palabras` : "Fijar meta de palabras"}</button>
-          {tab !== "cards" && tab !== "map" && <button onClick={addTemplate}>Añadir plantilla…</button>}
-          {tab === "book" && current?.kind === "scene" && sceneTpls.length > 0 && <button onClick={addSceneTemplate}>Plantilla de escena…</button>}
-        </footer>
+        {goal > 0 && <footer><progress value={Math.min(words, goal)} max={goal} /></footer>}
       </aside>
 
       <main className="main">
         <header className="toolbar">
           <span className="title">{tab === "cards" || tab === "map" ? card?.name : current?.title}</span>
-          {tab === "book" && current?.kind === "scene" && (
-            <>
-              <input type="date" className="date" aria-label="Fecha de la escena" value={current.date ?? ""}
-                onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, date: e.target.value })))} />
-              <input type="number" min={0} className="goal" aria-label="Meta de palabras de la escena" placeholder="Meta" value={current.goal || ""}
-                onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, goal: Math.max(0, Math.floor(Number(e.target.value))) || undefined })))} />
-            </>
-          )}
-          <span className="spacer" />
-          <div className="group">
-            <button onClick={openFile}>Abrir</button>
-            <button onClick={saveAs}>Guardar como…</button>
-          </div>
-          <details className="menu">
-            <summary>Exportar ▾</summary>
-            <div>
-              {([["md", "Markdown (.md)"], ["docx", "Word (.docx)"], ["epub", "EPUB (.epub)"], ["pdf", "PDF (imprimir)"]] as const).map(([k, l]) => (
-                <button key={k} onClick={(e) => exportAs(k, e.currentTarget)}>{l}</button>
-              ))}
-            </div>
-          </details>
-          <div className="group">
-            <button onClick={() => setFocus(!focus)}>{focus ? "Salir" : "Concentración"}</button>
-            <button onClick={() => setDark(!dark)}>{dark ? "Claro" : "Oscuro"}</button>
-          </div>
         </header>
 
-        {tab === "plugins" ? (
-          <PluginsPanel state={plug} onChange={setPlug} onMsg={setWarn} />
+        {ToolPanel ? (
+          <ToolPanel host={host} />
+        ) : tab === "plugins" ? (
+          <PluginsPanel state={plug} onChange={setPlug} onMsg={flash} tools={TOOLS} catalog={catalog} />
         ) : tab === "timeline" ? (
           <Timeline book={book} onSelect={openScene} onDate={(id, date) => setBook((b) => update(b, id, (n) => ({ ...n, date })))} />
         ) : tab === "cork" ? (
@@ -366,6 +423,8 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
             <SceneEditor
               key={current.id + rev}
               html={current.content ?? ""}
+              tools={tools}
+              host={host}
               onChange={(html) => setBook((b) => update(b, current.id, (n) => ({ ...n, content: html })))}
             />
           </>
@@ -373,7 +432,7 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
           <p className="empty">Selecciona o crea una escena para escribir.<br />Doble clic o F2 renombra. Arrastra, o usa Alt+↑↓, para reordenar. Ctrl+F busca en todo el libro.</p>
         )}
         <div className="statusbar">
-          {warn ? <span className="warn">{warn}</span> : <span>{fileName ? `${fileName} · ${status || "abierto"}` : status || "Solo en este navegador"}</span>}
+          {warn ? <span className={warn.startsWith("⚠") ? "warn" : "ok"}>{warn}</span> : <span>{fileName ? `${fileName} · ${status || "abierto"}` : status || "Solo en este navegador"}</span>}
           {pending && <button onClick={reconnect}>Reconectar «{pending.name}»</button>}
           <span className="spacer" />
           {tab === "book" && current?.kind === "scene" && <span>{countWords(current.content)}{current.goal ? ` / ${current.goal}` : ""} palabras en la escena</span>}
@@ -381,6 +440,7 @@ export default function App({ initial, handle: savedHandle, granted }: { initial
           <span>{words} palabras{goal > 0 && ` · ${Math.round((words / goal) * 100)}% de la meta`}</span>
         </div>
       </main>
+      </div>
     </div>
   );
 }

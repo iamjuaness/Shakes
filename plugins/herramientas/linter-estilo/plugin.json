@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "linter-estilo",
+  "name": "Linter de estilo",
+  "version": "1.0.0",
+  "description": "Subraya adverbios en -mente, voz pasiva y frases de más de 40 palabras, en vivo.",
+  "tool": "linter-estilo"
+}

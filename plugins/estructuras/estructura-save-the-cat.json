@@ -1,0 +1,44 @@
+{
+  "shakes": 1,
+  "id": "estructura-save-the-cat",
+  "name": "Save the Cat (15 beats)",
+  "version": "1.0.0",
+  "description": "Los 15 beats de Blake Snyder.",
+  "structures": [
+    {
+      "name": "Save the Cat (15 beats)",
+      "parts": [
+        {
+          "title": "Acto I",
+          "chapters": [
+            "Imagen de apertura",
+            "Declaración del tema",
+            "Preparación",
+            "Catalizador",
+            "Debate"
+          ]
+        },
+        {
+          "title": "Acto II",
+          "chapters": [
+            "Paso al acto II",
+            "Trama B",
+            "Diversión y juegos",
+            "Punto medio",
+            "Los malos se acercan",
+            "Todo está perdido",
+            "Noche oscura del alma"
+          ]
+        },
+        {
+          "title": "Acto III",
+          "chapters": [
+            "Paso al acto III",
+            "Final",
+            "Imagen final"
+          ]
+        }
+      ]
+    }
+  ]
+}

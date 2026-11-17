@@ -1,0 +1,36 @@
+{
+  "shakes": 1,
+  "id": "estructura-siete-puntos-wells",
+  "name": "Siete puntos (Dan Wells)",
+  "version": "1.0.0",
+  "description": "Estructura de siete puntos de Dan Wells, escrita del final al principio.",
+  "structures": [
+    {
+      "name": "Siete puntos (Dan Wells)",
+      "parts": [
+        {
+          "title": "Planteamiento",
+          "chapters": [
+            "Gancho",
+            "Punto de giro 1"
+          ]
+        },
+        {
+          "title": "Desarrollo",
+          "chapters": [
+            "Pinzamiento 1",
+            "Punto medio",
+            "Pinzamiento 2"
+          ]
+        },
+        {
+          "title": "Cierre",
+          "chapters": [
+            "Punto de giro 2",
+            "Resolución"
+          ]
+        }
+      ]
+    }
+  ]
+}

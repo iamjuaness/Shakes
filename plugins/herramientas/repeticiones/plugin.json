@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "repeticiones",
+  "name": "Repeticiones y muletillas",
+  "version": "1.0.0",
+  "description": "Subraya palabras repetidas a menos de 25 palabras; al pasar el ratón sugiere sustitutos.",
+  "tool": "repeticiones"
+}

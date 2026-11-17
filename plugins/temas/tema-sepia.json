@@ -1,0 +1,34 @@
+{
+  "shakes": 1,
+  "id": "tema-sepia",
+  "name": "Sepia",
+  "version": "1.0.0",
+  "description": "Tono papel antiguo, cálido y suave.",
+  "themes": [
+    {
+      "name": "Sepia",
+      "light": {
+        "--bg": "#f4ecd8",
+        "--surface": "#faf3e0",
+        "--panel": "#ebe0c4",
+        "--text": "#3b2f1e",
+        "--muted": "#8a7656",
+        "--accent": "#8b5a2b",
+        "--accent-soft": "#e8d5b0",
+        "--on-accent": "#fff",
+        "--line": "#dccfae"
+      },
+      "dark": {
+        "--bg": "#2a2218",
+        "--surface": "#322a1e",
+        "--panel": "#241d14",
+        "--text": "#e3d5b8",
+        "--muted": "#9a8a6a",
+        "--accent": "#d9a35f",
+        "--accent-soft": "#4a3a22",
+        "--on-accent": "#1c1710",
+        "--line": "#4a3d29"
+      }
+    }
+  ]
+}

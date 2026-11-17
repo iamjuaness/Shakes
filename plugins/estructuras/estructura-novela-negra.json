@@ -1,0 +1,39 @@
+{
+  "shakes": 1,
+  "id": "estructura-novela-negra",
+  "name": "Misterio / novela negra",
+  "version": "1.0.0",
+  "description": "Estructura de investigación: crimen, pistas, giros y revelación.",
+  "structures": [
+    {
+      "name": "Novela negra",
+      "parts": [
+        {
+          "title": "El caso",
+          "chapters": [
+            "Escena del crimen",
+            "Presentación del detective",
+            "Primeros sospechosos"
+          ]
+        },
+        {
+          "title": "La investigación",
+          "chapters": [
+            "Pistas y falsas pistas",
+            "Segundo crimen o amenaza",
+            "Giro: el caso cambia",
+            "Confrontación con el sospechoso"
+          ]
+        },
+        {
+          "title": "La verdad",
+          "chapters": [
+            "Revelación",
+            "Captura o fuga del culpable",
+            "Coste personal y cierre"
+          ]
+        }
+      ]
+    }
+  ]
+}

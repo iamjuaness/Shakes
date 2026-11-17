@@ -1,0 +1,59 @@
+{
+  "shakes": 1,
+  "id": "tema-noche-azul",
+  "name": "Noche azul y Solarized",
+  "version": "1.0.0",
+  "description": "Dos temas fríos: noche azul y Solarized.",
+  "themes": [
+    {
+      "name": "Noche azul",
+      "light": {
+        "--bg": "#eef2f8",
+        "--surface": "#ffffff",
+        "--panel": "#e2e9f3",
+        "--text": "#1c2433",
+        "--muted": "#6b7a94",
+        "--accent": "#2f5fd0",
+        "--accent-soft": "#d6e2fb",
+        "--on-accent": "#fff",
+        "--line": "#cfd9ea"
+      },
+      "dark": {
+        "--bg": "#0f1624",
+        "--surface": "#162036",
+        "--panel": "#0b111d",
+        "--text": "#dbe5f7",
+        "--muted": "#7d8dab",
+        "--accent": "#6ea0ff",
+        "--accent-soft": "#1d2d52",
+        "--on-accent": "#0b111d",
+        "--line": "#243350"
+      }
+    },
+    {
+      "name": "Solarized",
+      "light": {
+        "--bg": "#fdf6e3",
+        "--surface": "#fffbee",
+        "--panel": "#eee8d5",
+        "--text": "#073642",
+        "--muted": "#657b83",
+        "--accent": "#268bd2",
+        "--accent-soft": "#dbe8ee",
+        "--on-accent": "#fff",
+        "--line": "#e0d9bf"
+      },
+      "dark": {
+        "--bg": "#002b36",
+        "--surface": "#073642",
+        "--panel": "#00212b",
+        "--text": "#93a1a1",
+        "--muted": "#657b83",
+        "--accent": "#2aa198",
+        "--accent-soft": "#0b4a52",
+        "--on-accent": "#002b36",
+        "--line": "#0f4552"
+      }
+    }
+  ]
+}

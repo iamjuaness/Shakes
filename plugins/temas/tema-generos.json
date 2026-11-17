@@ -1,0 +1,109 @@
+{
+  "shakes": 1,
+  "id": "tema-generos",
+  "name": "Temas por género",
+  "version": "1.0.0",
+  "description": "Terror, fantasía, ciencia ficción y romance.",
+  "themes": [
+    {
+      "name": "Terror",
+      "light": {
+        "--bg": "#ecebea",
+        "--surface": "#f5f4f3",
+        "--panel": "#dedcda",
+        "--text": "#1a1a1a",
+        "--muted": "#6e6a68",
+        "--accent": "#8b0000",
+        "--accent-soft": "#ecd0d0",
+        "--on-accent": "#fff",
+        "--line": "#cfcbc8"
+      },
+      "dark": {
+        "--bg": "#0c0909",
+        "--surface": "#150f0f",
+        "--panel": "#080606",
+        "--text": "#d9d0d0",
+        "--muted": "#7d6e6e",
+        "--accent": "#c0201c",
+        "--accent-soft": "#3a1010",
+        "--on-accent": "#fff",
+        "--line": "#2a1a1a"
+      }
+    },
+    {
+      "name": "Fantasía",
+      "light": {
+        "--bg": "#f3efe3",
+        "--surface": "#fbf8ee",
+        "--panel": "#e6e0cc",
+        "--text": "#2b2a1f",
+        "--muted": "#7b7658",
+        "--accent": "#5b7f2b",
+        "--accent-soft": "#dde8c6",
+        "--on-accent": "#fff",
+        "--line": "#d6d1b8"
+      },
+      "dark": {
+        "--bg": "#141a12",
+        "--surface": "#1b2318",
+        "--panel": "#0f140d",
+        "--text": "#dde4cf",
+        "--muted": "#8a967a",
+        "--accent": "#9acd5a",
+        "--accent-soft": "#2c3a1f",
+        "--on-accent": "#101808",
+        "--line": "#2b3626"
+      }
+    },
+    {
+      "name": "Ciencia ficción",
+      "light": {
+        "--bg": "#eaf1f3",
+        "--surface": "#f7fbfc",
+        "--panel": "#dce7ea",
+        "--text": "#10242b",
+        "--muted": "#5d7a84",
+        "--accent": "#007a8a",
+        "--accent-soft": "#cdeaee",
+        "--on-accent": "#fff",
+        "--line": "#c5d8dd"
+      },
+      "dark": {
+        "--bg": "#071318",
+        "--surface": "#0c1c23",
+        "--panel": "#050d11",
+        "--text": "#c9eef5",
+        "--muted": "#5d93a0",
+        "--accent": "#19e3ff",
+        "--accent-soft": "#0b3a44",
+        "--on-accent": "#001418",
+        "--line": "#12363f"
+      }
+    },
+    {
+      "name": "Romance",
+      "light": {
+        "--bg": "#fbf0f2",
+        "--surface": "#fff8f9",
+        "--panel": "#f5e0e4",
+        "--text": "#3a1f27",
+        "--muted": "#9a6f7a",
+        "--accent": "#c2456b",
+        "--accent-soft": "#f8d7e0",
+        "--on-accent": "#fff",
+        "--line": "#ecd0d7"
+      },
+      "dark": {
+        "--bg": "#1f1216",
+        "--surface": "#28181d",
+        "--panel": "#190e12",
+        "--text": "#f0dce1",
+        "--muted": "#a8838d",
+        "--accent": "#f07a9c",
+        "--accent-soft": "#4a2330",
+        "--on-accent": "#2a0c16",
+        "--line": "#3c2229"
+      }
+    }
+  ]
+}

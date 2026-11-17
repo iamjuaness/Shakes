@@ -1,12 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import Root from "./Root";
 import { idbGet } from "./store";
 import { normalize } from "./tree";
 
 // Carga el proyecto (IndexedDB; migra el localStorage del formato anterior) y el handle del archivo antes de pintar.
 async function boot() {
-  let project = normalize(null);
+  let project: ReturnType<typeof normalize> | null = null; // sin proyecto guardado: pantalla de inicio
   try {
     const saved = await idbGet<unknown>("project");
     const legacy = localStorage.getItem("shakes.book");
@@ -19,7 +19,7 @@ async function boot() {
   try { granted = !!handle && (await handle.queryPermission({ mode: "readwrite" })) === "granted"; } catch {}
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
-      <App initial={project} handle={handle} granted={granted} />
+      <Root initial={project} handle={handle} granted={granted} />
     </React.StrictMode>,
   );
 }

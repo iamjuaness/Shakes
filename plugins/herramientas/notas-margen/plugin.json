@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "notas-margen",
+  "name": "Notas al margen",
+  "version": "1.0.0",
+  "description": "Añade notas a tramos de texto; se listan a la derecha y no salen en las exportaciones.",
+  "tool": "notas-margen"
+}

@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "manuscrito-editorial",
+  "name": "Manuscrito para editoriales",
+  "version": "1.0.0",
+  "description": "Manuscrito estándar (Courier 12, doble espacio, cabecera paginada) listo para imprimir a PDF.",
+  "tool": "manuscrito-editorial"
+}

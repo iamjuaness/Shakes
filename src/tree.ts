@@ -113,14 +113,14 @@ export interface Link { to: string; label: string }
 export interface Card { id: string; type: CardType; name: string; notes: string; links?: Link[]; x?: number; y?: number }
 export interface Version { id: string; at: string; label: string; auto?: boolean; book: Node; cards: Card[] }
 export interface DayLog { start: number; end: number }
-export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number }
+export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number; ext?: Record<string, any> } // ext: datos de plugins, por id de herramienta
 
 export const newProject = (): Project => ({ book: sampleBook(), cards: [], goal: 0, versions: [], log: {}, dailyGoal: 0 });
 
 // Acepta proyectos guardados con el formato v0 (solo el libro).
 export function normalize(raw: any): Project {
   if (raw?.kind === "book") return { ...newProject(), book: raw };
-  if (raw?.book?.kind === "book") return { book: raw.book, cards: raw.cards ?? [], goal: raw.goal ?? 0, versions: raw.versions ?? [], log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0 };
+  if (raw?.book?.kind === "book") return { book: raw.book, cards: raw.cards ?? [], goal: raw.goal ?? 0, versions: raw.versions ?? [], log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {} };
   return newProject();
 }
 

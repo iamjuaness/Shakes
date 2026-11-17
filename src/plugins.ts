@@ -11,11 +11,12 @@ export interface Plugin {
   themes: ThemeDef[];
   structures: Template[];
   sceneTemplates: SceneTpl[];
+  tool?: string; // id de una herramienta con código incluida en la app (carpeta plugins/herramientas)
 }
 export interface PluginState { plugins: Plugin[]; theme: string | null } // theme = "idPlugin:índice"
 
 // Variables CSS que un tema puede cambiar (las de :root en App.css).
-export const THEME_VARS = ["--bg", "--surface", "--panel", "--text", "--muted", "--accent", "--accent-soft", "--on-accent", "--line", "--shadow", "--radius"];
+export const THEME_VARS = ["--bg", "--surface", "--panel", "--text", "--muted", "--accent", "--accent-soft", "--on-accent", "--line", "--shadow", "--radius", "--font"];
 // Solo colores/medidas: sin ";", "{", "url(" ni "expression".
 const SAFE_VALUE = /^[#\w\s().,%/-]{1,80}$/;
 // Solo etiquetas de texto, sin atributos; script/style se eliminan con su contenido.
@@ -52,8 +53,9 @@ export function parsePlugin(raw: any): Plugin | string {
     const html = typeof s?.html === "string" ? clean(s.html.slice(0, 20000)) : "";
     return str(s?.name, 60) && html ? [{ name: str(s.name, 60), genre: str(s.genre, 40) || undefined, html }] : [];
   });
-  if (!themes.length && !structures.length && !sceneTemplates.length) return "El plugin no aporta temas, estructuras ni plantillas válidos.";
-  return { id, name, version: str(raw.version, 20) || "0.0.0", description: str(raw.description, 300), themes, structures, sceneTemplates };
+  const tool = str(raw.tool, 60) || undefined;
+  if (!themes.length && !structures.length && !sceneTemplates.length && !tool) return "El plugin no aporta temas, estructuras, plantillas ni herramienta.";
+  return { id, name, version: str(raw.version, 20) || "0.0.0", description: str(raw.description, 300), themes, structures, sceneTemplates, tool };
 }
 
 // Instala (o reemplaza por id) un plugin.
@@ -62,7 +64,7 @@ export function install(s: PluginState, p: Plugin): PluginState {
 }
 
 export function uninstall(s: PluginState, id: string): PluginState {
-  return { plugins: s.plugins.filter((x) => x.id !== id), theme: s.theme?.startsWith(id + ":") ? null : s.theme };
+  return { ...s, plugins: s.plugins.filter((x) => x.id !== id), theme: s.theme?.startsWith(id + ":") ? null : s.theme };
 }
 
 export function activeTheme(s: PluginState): ThemeDef | undefined {

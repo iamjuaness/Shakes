@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "arbol-genealogico",
+  "name": "Árbol genealógico",
+  "version": "1.0.0",
+  "description": "Dibuja generaciones a partir de relaciones como «padre de», «hijo de», «esposa de».",
+  "tool": "arbol-genealogico"
+}

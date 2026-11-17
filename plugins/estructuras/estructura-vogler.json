@@ -1,0 +1,41 @@
+{
+  "shakes": 1,
+  "id": "estructura-vogler",
+  "name": "Viaje del héroe (12 etapas)",
+  "version": "1.0.0",
+  "description": "Las 12 etapas de Vogler en tres actos.",
+  "structures": [
+    {
+      "name": "Viaje del héroe (Vogler, 12 etapas)",
+      "parts": [
+        {
+          "title": "Acto I: Separación",
+          "chapters": [
+            "1. Mundo ordinario",
+            "2. Llamada a la aventura",
+            "3. Rechazo de la llamada",
+            "4. Encuentro con el mentor",
+            "5. Cruce del primer umbral"
+          ]
+        },
+        {
+          "title": "Acto II: Iniciación",
+          "chapters": [
+            "6. Pruebas, aliados y enemigos",
+            "7. Acercamiento a la caverna más profunda",
+            "8. La odisea o calvario",
+            "9. La recompensa"
+          ]
+        },
+        {
+          "title": "Acto III: Retorno",
+          "chapters": [
+            "10. El camino de regreso",
+            "11. La resurrección",
+            "12. Regreso con el elixir"
+          ]
+        }
+      ]
+    }
+  ]
+}

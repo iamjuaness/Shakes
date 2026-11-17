@@ -1,0 +1,24 @@
+{
+  "shakes": 1,
+  "id": "estructura-guion-corto",
+  "name": "Guion corto / cuento",
+  "version": "1.0.0",
+  "description": "Estructura mínima en una sola parte.",
+  "structures": [
+    {
+      "name": "Guion corto",
+      "parts": [
+        {
+          "title": "Historia",
+          "chapters": [
+            "Gancho",
+            "Conflicto",
+            "Giro",
+            "Clímax",
+            "Final"
+          ]
+        }
+      ]
+    }
+  ]
+}
