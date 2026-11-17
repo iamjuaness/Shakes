@@ -1,4 +1,5 @@
 import type { Meta, Node } from "./tree";
+import { t } from "./i18n";
 
 // Reduce la imagen a un JPEG de ≤900 px (el .shks guarda la portada dentro: no debe pesar de más).
 async function reducir(file: File): Promise<{ url: string; w: number; h: number }> {
@@ -20,7 +21,7 @@ async function reducir(file: File): Promise<{ url: string; w: number; h: number 
 export function BookMeta({ node, onChange }: { node: Node; onChange: (m: Meta) => void }) {
   const m = node.meta ?? {};
   const set = (p: Partial<Meta>) => onChange({ ...m, ...p });
-  const kind = node.kind === "book" ? "libro" : node.kind === "saga" ? "saga" : "universo";
+  const kind = t(`kind.${node.kind}`);
   function pick() {
     const input = document.createElement("input");
     input.type = "file";
@@ -34,16 +35,16 @@ export function BookMeta({ node, onChange }: { node: Node; onChange: (m: Meta) =
   }
   return (
     <div className="panel bookmeta">
-      <h3>Datos del {kind}: {node.title}</h3>
-      <label>Autor<input value={m.author ?? ""} onChange={(e) => set({ author: e.target.value })} /></label>
-      <label>Año<input value={m.year ?? ""} inputMode="numeric" onChange={(e) => set({ year: e.target.value })} /></label>
-      <label>Sinopsis<textarea rows={5} value={m.blurb ?? ""} onChange={(e) => set({ blurb: e.target.value })} /></label>
+      <h3>{t("bm.title", { k: kind, t: node.title })}</h3>
+      <label>{t("bm.author")}<input value={m.author ?? ""} onChange={(e) => set({ author: e.target.value })} /></label>
+      <label>{t("bm.year")}<input value={m.year ?? ""} inputMode="numeric" onChange={(e) => set({ year: e.target.value })} /></label>
+      <label>{t("bm.blurb")}<textarea rows={5} value={m.blurb ?? ""} onChange={(e) => set({ blurb: e.target.value })} /></label>
       <div className="row">
-        {m.cover ? <img className="cover" src={m.cover} alt={`Portada de ${node.title}`} /> : <span className="muted">Sin portada.</span>}
-        <button onClick={pick}>{m.cover ? "Cambiar portada…" : "Elegir portada…"}</button>
-        {m.cover && <button onClick={() => set({ cover: undefined, cw: undefined, ch: undefined })}>Quitar</button>}
+        {m.cover ? <img className="cover" src={m.cover} alt={t("bm.coverOf", { t: node.title })} /> : <span className="muted">{t("bm.noCover")}</span>}
+        <button onClick={pick}>{m.cover ? t("bm.change") : t("bm.pick")}</button>
+        {m.cover && <button onClick={() => set({ cover: undefined, cw: undefined, ch: undefined })}>{t("bm.remove")}</button>}
       </div>
-      <p className="muted">La portada (imagen) se usa en Word, EPUB y PDF; en Markdown, LaTeX y Fountain salen autor, año y sinopsis.</p>
+      <p className="muted">{t("bm.hint")}</p>
     </div>
   );
 }

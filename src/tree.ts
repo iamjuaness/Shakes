@@ -1,6 +1,7 @@
 // Modelo del manuscrito: [universo ->] [saga ->] libro -> partes -> capítulos -> escenas.
 // La raíz del proyecto es un libro, o una saga/universo que agrupa libros (las fichas son compartidas por todos).
 // "blank": raíz sin tipo (proyecto en blanco o raíz borrada): admite cualquier nivel como hijo directo.
+import { getLang, t } from "./i18n.ts";
 export type Kind = "blank" | "universe" | "saga" | "book" | "part" | "chapter" | "scene";
 
 // Datos editoriales de un libro (o saga/universo): salen en la portada de las exportaciones.
@@ -14,6 +15,7 @@ export interface Node {
   summary?: string; // sinopsis breve (corcho)
   goal?: number; // meta de palabras de la escena
   meta?: Meta; // solo universo/saga/libro
+  status?: Status; // estado de la escena (borrador/revisada/final)
   date?: string; // fecha en la línea de tiempo cronológica (texto libre; ordena lexicográficamente, usar ISO)
   children: Node[];
 }
@@ -32,10 +34,8 @@ export const childKind: Record<Kind, Kind | null> = {
 export const ACEPTA: Record<Kind, Kind[]> = { blank: ["scene", "chapter", "part", "book", "saga", "universe"], universe: ["saga", "book"], saga: ["book"], book: ["part"], part: ["chapter"], chapter: ["scene"], scene: [] };
 export const esContenedor = (k: Kind) => k === "universe" || k === "saga";
 
-const label: Record<Kind, string> = { blank: "Proyecto", universe: "Universo", saga: "Saga", book: "Libro", part: "Parte", chapter: "Capítulo", scene: "Escena" };
-
 export function newNode(kind: Kind, n: number): Node {
-  return { id: crypto.randomUUID(), kind, title: `${label[kind]} ${n}`, content: kind === "scene" ? "" : undefined, children: [] };
+  return { id: crypto.randomUUID(), kind, title: `${t(`kindT.${kind}`)} ${n}`, content: kind === "scene" ? "" : undefined, children: [] };
 }
 
 export function find(root: Node, id: string): Node | undefined {
@@ -125,9 +125,19 @@ export function toMarkdown(n: Node, base = level[n.kind] - 1): string {
 }
 
 // Ficha del mundo (personaje, lugar...).
-export type CardType = "Personaje" | "Lugar" | "Objeto" | "Facción";
+export type CardType = "character" | "place" | "object" | "faction";
+export const CARD_TYPES: CardType[] = ["character", "place", "object", "faction"];
+// Los proyectos antiguos guardaban el tipo en español: se migra al leer (normalize).
+const OLD_TYPE: Record<string, CardType> = { Personaje: "character", Lugar: "place", Objeto: "object", "Facción": "faction" };
+export const fixCards = (cs: any[] | undefined): Card[] => (cs ?? []).map((c) => (CARD_TYPES.includes(c?.type) ? c : { ...c, type: OLD_TYPE[c?.type] ?? "character" }));
+export const STATUSES = ["draft", "revised", "final"] as const; // estado de una escena
+export type Status = (typeof STATUSES)[number];
 export interface Link { to: string; label: string }
-export interface Card { id: string; type: CardType; name: string; alias?: string; notes: string; links?: Link[]; x?: number; y?: number } // alias: apodos o nombres cortos separados por comas
+// Ficha de personaje: además de nombre y apodos lleva los campos de CHAR_FIELDS (solo se muestran si type === "character").
+export const CHAR_SHORT = ["age", "job", "origin"] as const; // una línea
+export const CHAR_LONG = ["virtues", "flaw", "backstory", "lie", "arc", "trait"] as const; // varias líneas
+export type CharField = (typeof CHAR_SHORT)[number] | (typeof CHAR_LONG)[number];
+export interface Card extends Partial<Record<CharField, string>> { id: string; type: CardType; name: string; alias?: string; notes: string; links?: Link[]; x?: number; y?: number } // alias: apodos o nombres cortos separados por comas
 export interface Version { id: string; at: string; label: string; auto?: boolean; book: Node; cards: Card[] }
 export interface DayLog { start: number; end: number }
 export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number; ext?: Record<string, any> } // ext: datos de plugins, por id de herramienta
@@ -149,7 +159,7 @@ export function newProject(tipo: Tipo = "book", title = "", tpl?: Template): Pro
 // Acepta proyectos guardados con el formato v0 (solo el libro).
 export function normalize(raw: any): Project {
   if (raw?.kind === "book") return { ...newProject(), book: raw };
-  if (["blank", "book", "saga", "universe"].includes(raw?.book?.kind)) return { book: raw.book, cards: raw.cards ?? [], goal: raw.goal ?? 0, versions: raw.versions ?? [], log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {} };
+  if (["blank", "book", "saga", "universe"].includes(raw?.book?.kind)) return { book: raw.book, cards: fixCards(raw.cards), goal: raw.goal ?? 0, versions: (raw.versions ?? []).map((v: any) => ({ ...v, cards: fixCards(v.cards) })), log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {} };
   return newProject();
 }
 
@@ -336,6 +346,27 @@ export const TEMPLATES: Template[] = [
   { name: "Fábula", parts: [{ title: "Fábula", chapters: ["Presentación", "Nudo", "Desenlace", "Moraleja"] }] },
   { name: "Cuento", parts: [{ title: "Cuento", chapters: ["Inicio", "Conflicto", "Clímax", "Final"] }] },
 ];
+
+const TEMPLATES_EN: Template[] = [
+  { name: "Three acts", parts: [
+    { title: "Act I: Setup", chapters: ["Ordinary world", "Inciting incident", "First plot point"] },
+    { title: "Act II: Confrontation", chapters: ["Obstacles", "Midpoint", "All is lost"] },
+    { title: "Act III: Resolution", chapters: ["Climax", "Denouement"] } ] },
+  { name: "Hero's journey", parts: [
+    { title: "Departure", chapters: ["Ordinary world", "Call to adventure", "Refusal of the call", "Meeting the mentor", "Crossing the threshold"] },
+    { title: "Initiation", chapters: ["Tests, allies and enemies", "Approach to the inmost cave", "Ordeal", "Reward"] },
+    { title: "Return", chapters: ["The road back", "Resurrection", "Return with the elixir"] } ] },
+  { name: "Save the Cat", parts: [
+    { title: "Act I", chapters: ["Opening image", "Theme stated", "Set-up", "Catalyst", "Debate", "Break into two"] },
+    { title: "Act II", chapters: ["B story", "Fun and games", "Midpoint", "Bad guys close in", "All is lost", "Dark night of the soul", "Break into three"] },
+    { title: "Act III", chapters: ["Finale", "Final image"] } ] },
+  { name: "Seven points", parts: [
+    { title: "Story", chapters: ["Hook", "Plot turn 1", "Pinch 1", "Midpoint", "Pinch 2", "Plot turn 2", "Resolution"] } ] },
+  { name: "Fable", parts: [{ title: "Fable", chapters: ["Introduction", "Knot", "Outcome", "Moral"] }] },
+  { name: "Short story", parts: [{ title: "Short story", chapters: ["Beginning", "Conflict", "Climax", "Ending"] }] },
+];
+// Estructuras integradas en el idioma de la interfaz (mismo orden y número que TEMPLATES).
+export const templates = (): Template[] => (getLang() === "en" ? TEMPLATES_EN : TEMPLATES);
 
 // Añade las partes de la plantilla al final del libro; cada capítulo con una escena vacía.
 export function applyTemplate(book: Node, t: Template): Node {

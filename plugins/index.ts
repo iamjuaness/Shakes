@@ -22,6 +22,7 @@ import { manuscritoEditorial } from "./herramientas/manuscrito-editorial/index";
 import { obsidianSync } from "./herramientas/obsidian-sync/index";
 import { resumenEscenas } from "./herramientas/resumen-escenas/index";
 import { notasLaterales } from "./herramientas/notas-laterales/index";
+import { ortografiaEs, ortografiaEn } from "./herramientas/ortografia/index";
 
 export const catalog: Plugin[] = Object.values(import.meta.glob("./**/*.json", { eager: true, import: "default" }))
   .map((raw) => parsePlugin(raw))
@@ -31,6 +32,7 @@ export const TOOLS: ToolPlugin[] = [
   fichasAuto, dialogoAuto, repeticionesTool, linterEstilo, notasMargen, sesionPomodoro, maquinaEscribir,
   inconsistenciasTool, arcosPersonaje, mapaLugares, arbolGenealogico, calendario, tramas,
   generadorNombres, importar, exportarExtra, manuscritoEditorial, obsidianSync, resumenEscenas, notasLaterales,
+  ortografiaEs, ortografiaEn,
 ];
 
 // Se instalan solos la primera vez que se abre Shakes; el resto lo elige el usuario en la pestaña Plugins.

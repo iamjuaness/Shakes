@@ -18,8 +18,8 @@ assert.equal(prefixAt("ayer vimos a elena"), null);
 
 const c = candidates("El viento llegó. Ayer Lucas viajó a Toledo y vio a Elena Marín. Pedro Gil rió. Luego, Ana.", cards);
 assert.deepEqual(c.map((x) => x.name), ["Lucas", "Toledo", "Pedro Gil", "Ana"]);
-assert.equal(c.find((x) => x.name === "Toledo")!.type, "Personaje", "«a Toledo»: sin preposición de lugar");
-assert.equal(candidates("Vivía en Sevilla.", [])[0].type, "Lugar");
+assert.equal(c.find((x) => x.name === "Toledo")!.type, "character", "«a Toledo»: sin preposición de lugar");
+assert.equal(candidates("Vivía en Sevilla.", [])[0].type, "place");
 assert.deepEqual(candidates("Ayer Lucas rió.", [], new Set(["lucas"])), [], "ignorados");
 assert.equal(findRefs("Vero llegó; Véronique rió.", [{ id: "v", name: "Véronique Dupont", alias: "Vero, Véronique" }]).length, 2, "apodos");
 console.log("ok");

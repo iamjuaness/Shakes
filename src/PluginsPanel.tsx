@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import type React from "react";
 import { Plugin, PluginState, install, parsePlugin, uninstall } from "./plugins";
 import { fetchRemote } from "./remote";
+import { t } from "./i18n";
 import type { ToolPlugin } from "../plugins/herramientas/types";
 
 type Cat = "herramienta" | "estructuras" | "tema";
-const CATS: [Cat, string][] = [["herramienta", "Herramientas"], ["estructuras", "Estructuras"], ["tema", "Temas"]];
+const CATS: [Cat, "pg.tool" | "pg.struct" | "pg.theme"][] = [["herramienta", "pg.tool"], ["estructuras", "pg.struct"], ["tema", "pg.theme"]];
 export const kind = (p: Plugin): Cat => (p.tool ? "herramienta" : p.themes.length ? "tema" : "estructuras");
 
 export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state: PluginState; onChange: (s: PluginState) => void; onMsg: (m: string) => void; tools: ToolPlugin[]; catalog: Plugin[] }) {
@@ -17,9 +18,9 @@ export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state
   useEffect(load, []);
 
   function add(p: Plugin) {
-    if (p.tool && !tools.some((t) => t.id === p.tool)) return onMsg(`⚠ La herramienta «${p.tool}» necesita una versión más nueva de Shakes.`);
+    if (p.tool && !tools.some((t) => t.id === p.tool)) return onMsg(t("pg.needNew", { t: p.tool }));
     onChange(install(state, p));
-    onMsg(`Plugin «${p.name}» instalado`);
+    onMsg(t("pg.added", { n: p.name }));
   }
   function addFile() {
     const input = document.createElement("input");
@@ -30,9 +31,9 @@ export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state
       if (!f) return;
       try {
         const p = parsePlugin(JSON.parse(await f.text()));
-        if (typeof p === "string") return onMsg("⚠ Plugin no válido: " + p);
+        if (typeof p === "string") return onMsg(t("pg.invalid", { e: p }));
         add(p);
-      } catch { onMsg("⚠ El archivo no es JSON válido."); }
+      } catch { onMsg(t("pg.badJson")); }
     };
     input.click();
   }
@@ -56,27 +57,27 @@ export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state
   return (
     <div className="panel">
       <div className="row">
-        <input type="search" className="grow" placeholder="Buscar plugins…" aria-label="Buscar plugins" value={q} onChange={(e) => setQ(e.target.value)} />
-        <button onClick={addFile}>Desde archivo…</button>
+        <input type="search" className="grow" placeholder={t("pg.search")} aria-label={t("pg.search")} value={q} onChange={(e) => setQ(e.target.value)} />
+        <button onClick={addFile}>{t("pg.file")}</button>
       </div>
       <div className="seg" role="tablist">
-        {CATS.map(([k, l]) => <button key={k} role="tab" aria-selected={cat === k} className={cat === k ? "on" : ""} onClick={() => setCat(k)}>{l} <span className="muted">{count(k)}</span></button>)}
+        {CATS.map(([k, l]) => <button key={k} role="tab" aria-selected={cat === k} className={cat === k ? "on" : ""} onClick={() => setCat(k)}>{t(l)} <span className="muted">{count(k)}</span></button>)}
       </div>
       {cat === "tema" && (
         <>
-          <h3>Tema activo</h3>
-          <label className="row"><input type="radio" name="theme" checked={!state.theme} onChange={() => onChange({ ...state, theme: null })} /> Predeterminado</label>
+          <h3>{t("pg.active")}</h3>
+          <label className="row"><input type="radio" name="theme" checked={!state.theme} onChange={() => onChange({ ...state, theme: null })} /> {t("pg.default")}</label>
           {themes.map((t) => (
             <label key={t.key} className="row"><input type="radio" name="theme" checked={state.theme === t.key} onChange={() => onChange({ ...state, theme: t.key })} /> {t.label}</label>
           ))}
         </>
       )}
-      <h3>Instalados</h3>
-      {!installed.length && <p className="muted">Ninguno.</p>}
-      <ul className="versions">{installed.map((p) => row(p, <button onClick={() => onChange(uninstall(state, p.id))}>Quitar</button>))}</ul>
-      <h3>Disponibles <span className="muted">{net === "cargando" ? "· buscando en GitHub…" : net === "ok" ? `· GitHub: ${remote.length} plugins` : `· sin GitHub (${net}); se muestran los incluidos`}</span> <button onClick={load}>Actualizar</button></h3>
-      {!available.length && <p className="muted">{needle ? "Sin resultados." : "Todos instalados."}</p>}
-      <ul className="versions">{available.map((p) => row(p, <button onClick={() => add(p)}>Instalar</button>))}</ul>
+      <h3>{t("pg.installed")}</h3>
+      {!installed.length && <p className="muted">{t("pg.none")}</p>}
+      <ul className="versions">{installed.map((p) => row(p, <button onClick={() => onChange(uninstall(state, p.id))}>{t("pg.remove")}</button>))}</ul>
+      <h3>{t("pg.available")} <span className="muted">{net === "cargando" ? t("pg.loading") : net === "ok" ? t("pg.gh", { n: remote.length }) : t("pg.noGh", { e: net })}</span> <button onClick={load}>{t("pg.refresh")}</button></h3>
+      {!available.length && <p className="muted">{needle ? t("pg.noHits") : t("pg.allIn")}</p>}
+      <ul className="versions">{available.map((p) => row(p, <button onClick={() => add(p)}>{t("pg.install")}</button>))}</ul>
     </div>
   );
 }

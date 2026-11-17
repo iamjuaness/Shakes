@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "ortografia-es",
+  "name": "Ortografía (español)",
+  "version": "1.0.0",
+  "description": "Subraya en rojo las palabras mal escritas en español. Clic = sugerencias o añadir al diccionario. Conoce los nombres de tus fichas.",
+  "tool": "ortografia-es"
+}

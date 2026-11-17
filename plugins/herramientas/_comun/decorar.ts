@@ -10,7 +10,8 @@ import { ask } from "../../../src/dialog";
 import { aprender, propiosDe } from "./sinonimos";
 
 // `learn`: palabra a la que el usuario puede enseñar sinónimos desde el menú (también cuando no hay ninguno).
-export interface Span { from: number; to: number; class: string; title?: string; sug?: string[]; learn?: string }
+// `lazy`: sustitutos que se calculan solo al abrir el menú (caro de hacer para todos los tramos). `accion`: botón extra del menú (ej. añadir al diccionario).
+export interface Span { from: number; to: number; class: string; title?: string; sug?: string[]; learn?: string; lazy?: () => string[]; accion?: { label: string; run: () => void } }
 
 const mayus = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
@@ -45,7 +46,8 @@ const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
 
 function menu(view: EditorView, d: Decoration, key: PluginKey) {
   cerrar();
-  const { sug, msg, learn } = d.spec as { sug: string[]; msg?: string; learn?: string };
+  const { sug: fijos, msg, learn, lazy, accion } = d.spec as { sug: string[]; msg?: string; learn?: string; lazy?: () => string[]; accion?: Span["accion"] };
+  const sug = lazy ? lazy() : fijos;
   const el = document.createElement("div");
   el.className = "sug-menu";
   el.setAttribute("role", "menu");
@@ -57,6 +59,14 @@ function menu(view: EditorView, d: Decoration, key: PluginKey) {
     b.textContent = s || "Quitar";
     if (!s) b.className = "quitar";
     b.onclick = () => { cerrar(); reemplazar(view, d.from, d.to, s); };
+    el.appendChild(b);
+  }
+  if (accion) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "quitar";
+    b.textContent = accion.label;
+    b.onclick = () => { cerrar(); accion.run(); view.dispatch(view.state.tr.setMeta(key, true)); view.focus(); };
     el.appendChild(b);
   }
   if (learn) {
@@ -81,7 +91,8 @@ function menu(view: EditorView, d: Decoration, key: PluginKey) {
   setTimeout(() => { document.addEventListener("mousedown", fuera, true); document.addEventListener("keydown", tecla, true); }, 0);
 }
 
-export const decorar = (name: string, spans: (text: string, previo: string) => Span[]) =>
+// `listo`: promesa (ej. carga de un diccionario) tras la cual hay que recalcular los subrayados.
+export const decorar = (name: string, spans: (text: string, previo: string) => Span[], listo?: Promise<unknown>) =>
   Extension.create({
     name,
     addProseMirrorPlugins() {
@@ -93,8 +104,8 @@ export const decorar = (name: string, spans: (text: string, previo: string) => S
           if (!node.isTextblock) return true;
           const text = node.textBetween(0, node.content.size, undefined, "￼");
           for (const s of spans(text, previo)) {
-            const act = !!(s.sug?.length || s.learn);
-            decos.push(Decoration.inline(pos + 1 + s.from, pos + 1 + s.to, { class: s.class + (act ? " sug" : ""), ...(s.title ? { title: s.title } : {}) }, act ? { sug: s.sug ?? [], msg: s.title, learn: s.learn } : {}));
+            const act = !!(s.sug?.length || s.learn || s.lazy || s.accion);
+            decos.push(Decoration.inline(pos + 1 + s.from, pos + 1 + s.to, { class: s.class + (act ? " sug" : ""), ...(s.title ? { title: s.title } : {}) }, act ? { sug: s.sug ?? [], msg: s.title, learn: s.learn, lazy: s.lazy, accion: s.accion } : {}));
           }
           previo = text;
           return false;
@@ -104,6 +115,7 @@ export const decorar = (name: string, spans: (text: string, previo: string) => S
       return [new Plugin({
         key,
         state: { init: (_, s) => build(s.doc), apply: (tr, old) => (tr.docChanged || tr.getMeta(key) ? build(tr.doc) : old) },
+        view: (v) => { listo?.then(() => { if (!v.isDestroyed) v.dispatch(v.state.tr.setMeta(key, true)); }, () => {}); return {}; },
         props: {
           decorations: (s) => key.getState(s),
           handleClick(view, pos) {

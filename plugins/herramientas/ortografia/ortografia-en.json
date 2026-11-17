@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "ortografia-en",
+  "name": "Spelling (English)",
+  "version": "1.0.0",
+  "description": "Underlines misspelled English words in red. Click = suggestions or add to dictionary. Knows your character and place names.",
+  "tool": "ortografia-en"
+}

@@ -6,7 +6,7 @@ import type { ToolHost, ToolPlugin } from "../types";
 // Matriz personaje × escena: cuántas veces aparece cada uno, en orden narrativo.
 function Panel({ host }: { host: ToolHost }) {
   const list = scenes(host.project.book);
-  const chars = host.cards.filter((c) => c.type === "Personaje");
+  const chars = host.cards.filter((c) => c.type === "character");
   const counts = list.map(({ scene }) => {
     const m = new Map<string, number>();
     for (const r of findRefs(plain(scene.content), chars)) m.set(r.id, (m.get(r.id) ?? 0) + 1);

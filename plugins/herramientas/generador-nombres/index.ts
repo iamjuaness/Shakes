@@ -16,7 +16,7 @@ export const generadorNombres: ToolPlugin = {
         const i = await choose("Elige un nombre (crea su ficha de personaje):", [...names, "↻ Otros nombres"]);
         if (i === null) return;
         if (i < names.length) {
-          host.addCard({ id: crypto.randomUUID(), type: "Personaje", name: names[i], notes: "" });
+          host.addCard({ id: crypto.randomUUID(), type: "character", name: names[i], notes: "" });
           return host.notify(`Ficha «${names[i]}» creada`);
         }
       }

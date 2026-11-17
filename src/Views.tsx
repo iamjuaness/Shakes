@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { Card, CardType, Node, Project, Style, analyze, chronological, countWords, dialogueShare, diffVersions, mentions, plainText, scenes, search, today, writtenOn } from "./tree";
+import { CARD_TYPES, CHAR_LONG, CHAR_SHORT, Card, CardType, Node, Project, Style, analyze, chronological, countWords, dialogueShare, diffVersions, mentions, plainText, scenes, search, today, writtenOn } from "./tree";
 import { ask, confirmAsk } from "./dialog";
+import { t } from "./i18n";
 
 // ---------- Línea de tiempo ----------
 export function Timeline({ book, onSelect, onDate }: { book: Node; onSelect: (id: string) => void; onDate: (id: string, date: string) => void }) {
@@ -11,18 +12,18 @@ export function Timeline({ book, onSelect, onDate }: { book: Node; onSelect: (id
   return (
     <div className="panel">
       <div className="row">
-        <button className={!chrono ? "on" : ""} onClick={() => setChrono(false)}>Narrativa</button>
-        <button className={chrono ? "on" : ""} onClick={() => setChrono(true)}>Cronológica</button>
-        <span className="muted">Cambia la fecha de cada escena aquí mismo. Las escenas sin fecha van al final.</span>
+        <button className={!chrono ? "on" : ""} onClick={() => setChrono(false)}>{t("tl.narr")}</button>
+        <button className={chrono ? "on" : ""} onClick={() => setChrono(true)}>{t("tl.chrono")}</button>
+        <span className="muted">{t("tl.hint")}</span>
       </div>
       <ol className="timeline">
         {shown.map(({ scene, path }) => (
           <li key={scene.id} onClick={() => onSelect(scene.id)}>
             <div className="tl-row">
               <b>{scene.title}</b>
-              <input type="date" aria-label={`Fecha de ${scene.title}`} value={scene.date ?? ""} onClick={(e) => e.stopPropagation()} onChange={(e) => onDate(scene.id, e.target.value)} />
+              <input type="date" aria-label={t("tl.dateOf", { t: scene.title })} value={scene.date ?? ""} onClick={(e) => e.stopPropagation()} onChange={(e) => onDate(scene.id, e.target.value)} />
             </div>
-            <span className="muted">{path} · {countWords(scene.content)} palabras</span>
+            <span className="muted">{path} · {t("words.n", { n: countWords(scene.content) })}</span>
           </li>
         ))}
       </ol>
@@ -48,10 +49,10 @@ export function RelationMap({ cards, onSelect, onMove }: { cards: Card[]; onSele
     return { x: p.x, y: p.y };
   };
   const clamp = (v: number) => Math.min(475, Math.max(25, v));
-  if (!cards.length) return <p className="empty">Crea fichas y relaciónalas para ver el mapa.</p>;
+  if (!cards.length) return <p className="empty">{t("map.empty")}</p>;
   return (
     <>
-      <p className="muted hint">Arrastra los nodos para ordenar el mapa. Clic para abrir la ficha.</p>
+      <p className="muted hint">{t("map.hint")}</p>
       <svg
         ref={svg}
         className="map"
@@ -105,21 +106,21 @@ export function RelationMap({ cards, onSelect, onMove }: { cards: Card[]; onSele
 }
 
 // ---------- Estilo y progreso ----------
-const level = (n: number) => (n < 40 ? "muy difícil" : n < 55 ? "algo difícil" : n < 65 ? "normal" : n < 80 ? "bastante fácil" : "muy fácil");
+const level = (n: number) => t(`lv.${n < 40 ? 1 : n < 55 ? 2 : n < 65 ? 3 : n < 80 ? 4 : 5}` as "lv.1");
 
 function Stats({ s, dialogue }: { s: Style; dialogue: number }) {
   const m: [string, string | number][] = [
-    ["palabras", s.words], ["frases", s.sentences], ["palabras por frase", s.avgSentence], ["frase más larga", s.longest],
-    ["adverbios en -mente", s.adverbs], ["diálogo", dialogue + " %"], [`legibilidad · ${level(s.readability)}`, s.readability],
+    [t("stat.words"), s.words], [t("stat.sentences"), s.sentences], [t("stat.avg"), s.avgSentence], [t("stat.longest"), s.longest],
+    [t("stat.adverbs"), s.adverbs], [t("stat.dialogue"), dialogue + " %"], [t("stat.read", { l: level(s.readability) }), s.readability],
   ];
   return (
     <>
       <div className="stats">{m.map(([l, v]) => <div className="stat" key={l}><b>{v}</b><span>{l}</span></div>)}</div>
-      <p className="muted">Más repetidas (sin nombres de fichas)</p>
+      <p className="muted">{t("stat.top")}</p>
       <div className="chips">{s.top.map(([w, n]) => <span className="chip" key={w}>{w} · {n}</span>) || null}</div>
       {s.near.length > 0 && (
         <>
-          <p className="muted">Repeticiones cercanas (misma palabra a menos de 25 palabras)</p>
+          <p className="muted">{t("stat.near")}</p>
           <div className="chips">{s.near.map(([w, n]) => <span className="chip warnchip" key={w}>{w} · {n}</span>)}</div>
         </>
       )}
@@ -127,26 +128,26 @@ function Stats({ s, dialogue }: { s: Style; dialogue: number }) {
   );
 }
 
-export function Analysis({ book, current, cards, project, onDailyGoal }: { book: Node; current?: Node; cards: Card[]; project: Project; onDailyGoal: () => void }) {
+export function Analysis({ book, current, cards, project, onDailyGoal }: { book: Node; current?: Node; cards: Card[]; project: Project; onDailyGoal: (n: number) => void }) {
   const names = cards.map((c) => c.name);
   const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return d.toLocaleDateString("sv"); });
   const max = Math.max(project.dailyGoal, 1, ...days.map((d) => writtenOn(project.log, d)));
   return (
     <div className="panel">
-      <div className="row"><h3 style={{ margin: 0 }}>Progreso diario</h3><span className="spacer" /><button onClick={onDailyGoal}>{project.dailyGoal ? `Meta diaria: ${project.dailyGoal}` : "Fijar meta diaria"}</button></div>
+      <div className="row"><h3 style={{ margin: 0 }}>{t("prog.title")}</h3><span className="spacer" /><label className="fld">{t("prog.goal.label")}<input type="number" min={0} className="goal" placeholder="0" value={project.dailyGoal || ""} onChange={(e) => onDailyGoal(Math.max(0, Math.floor(Number(e.target.value))) || 0)} /></label></div>
       <div className="days">
         {days.filter((d) => d === today() || project.log[d]).map((d) => {
           const n = writtenOn(project.log, d);
           return (
             <div className="day" key={d}>
-              <span className="muted">{d === today() ? "Hoy" : d}</span>
+              <span className="muted">{d === today() ? t("prog.today") : d}</span>
               <div className="bar"><i style={{ width: `${(n / max) * 100}%` }} className={project.dailyGoal && n >= project.dailyGoal ? "done" : ""} /></div>
               <span>{n}</span>
             </div>
           );
         })}
       </div>
-      <h3>Libro completo</h3>
+      <h3>{t("prog.book")}</h3>
       <Stats s={analyze(plainText(book), names)} dialogue={dialogueShare(book)} />
       {current && current.kind !== "book" && (
         <>
@@ -168,31 +169,31 @@ export function Versions({ project, onSave, onRestore, onDelete }: {
   const [open, setOpen] = useState<string | null>(null);
   return (
     <div className="panel">
-      <button onClick={async () => { const l = await ask("Nombre de la versión", new Date().toLocaleString()); if (l !== null) onSave(l); }}>Guardar versión</button>
+      <button onClick={async () => { const l = await ask(t("ver.name"), new Date().toLocaleString()); if (l !== null) onSave(l); }}>{t("ver.save")}</button>
       <ul className="versions">
         {project.versions.map((v) => {
           const d = open === v.id ? diffVersions(v.book, project.book) : null;
           return (
             <li key={v.id}>
               <div className="v-head">
-                <span>{v.label || "Sin nombre"}{v.auto && <em className="muted"> · automática</em>}<span className="muted">{new Date(v.at).toLocaleString()}</span></span>
-                <button onClick={() => setOpen(open === v.id ? null : v.id)}>{d ? "Ocultar" : "Comparar"}</button>
-                <button onClick={async () => (await confirmAsk("¿Restaurar esta versión? Antes se guarda una copia del estado actual.")) && onRestore(v.id)}>Restaurar</button>
-                <button aria-label="Eliminar versión" onClick={async () => (await confirmAsk("¿Eliminar esta versión?")) && onDelete(v.id)}>×</button>
+                <span>{v.label || t("ver.noName")}{v.auto && <em className="muted">{t("ver.auto")}</em>}<span className="muted">{new Date(v.at).toLocaleString()}</span></span>
+                <button onClick={() => setOpen(open === v.id ? null : v.id)}>{d ? t("ver.hide") : t("ver.compare")}</button>
+                <button onClick={async () => (await confirmAsk(t("ver.restoreAsk"))) && onRestore(v.id)}>{t("ver.restore")}</button>
+                <button aria-label={t("ver.delete")} onClick={async () => (await confirmAsk(t("ver.deleteAsk"))) && onDelete(v.id)}>×</button>
               </div>
               {d && (
                 <div className="diff">
-                  <p>Frente al texto actual: <b>{d.wordDelta >= 0 ? "+" : ""}{d.wordDelta}</b> palabras</p>
-                  {([["Cambiadas", d.changed], ["Añadidas después", d.added], ["Eliminadas después", d.removed]] as const).map(([l, list]) =>
+                  <p>{t("ver.vs", { d: (d.wordDelta >= 0 ? "+" : "") + d.wordDelta })}</p>
+                  {([[t("ver.changed"), d.changed], [t("ver.added"), d.added], [t("ver.removed"), d.removed]] as const).map(([l, list]) =>
                     list.length > 0 && <p key={l}><b>{l}:</b> {list.map((s) => s.scene.title).join(", ")}</p>)}
-                  {!d.changed.length && !d.added.length && !d.removed.length && <p className="muted">Sin diferencias en las escenas.</p>}
+                  {!d.changed.length && !d.added.length && !d.removed.length && <p className="muted">{t("ver.same")}</p>}
                 </div>
               )}
             </li>
           );
         })}
       </ul>
-      {!project.versions.length && <p className="muted">Sin versiones guardadas.</p>}
+      {!project.versions.length && <p className="muted">{t("ver.none")}</p>}
     </div>
   );
 }
@@ -200,15 +201,15 @@ export function Versions({ project, onSave, onRestore, onDelete }: {
 // ---------- Corcho ----------
 export function Corkboard({ book, onSelect, onSummary }: { book: Node; onSelect: (id: string) => void; onSummary: (id: string, text: string) => void }) {
   const list = scenes(book);
-  if (!list.length) return <p className="empty">Aún no hay escenas.</p>;
+  if (!list.length) return <p className="empty">{t("cork.empty")}</p>;
   return (
     <div className="cork">
       {list.map(({ scene, path }) => (
         <div className="note" key={scene.id}>
           <button className="linklike" onClick={() => onSelect(scene.id)}>{scene.title}</button>
-          <span className="muted">{path}</span>
-          <textarea aria-label={`Sinopsis de ${scene.title}`} placeholder="Sinopsis…" value={scene.summary ?? ""} onChange={(e) => onSummary(scene.id, e.target.value)} />
-          <span className="muted">{countWords(scene.content)}{scene.goal ? ` / ${scene.goal}` : ""} palabras{scene.date ? ` · ${scene.date}` : ""}</span>
+          <span className="muted">{path}{scene.status && <span className={`chip st-${scene.status}`}>{t(`status.${scene.status}`)}</span>}</span>
+          <textarea aria-label={t("cork.synopsisOf", { t: scene.title })} placeholder={t("cork.synopsis")} value={scene.summary ?? ""} onChange={(e) => onSummary(scene.id, e.target.value)} />
+          <span className="muted">{countWords(scene.content)}{scene.goal ? ` / ${scene.goal}` : ""} {t("stat.words")}{scene.date ? ` · ${scene.date}` : ""}</span>
         </div>
       ))}
     </div>
@@ -224,11 +225,11 @@ export function SearchPanel({ book, onOpen, onReplace }: { book: Node; onOpen: (
   return (
     <div className="panel">
       <div className="row">
-        <input type="text" autoFocus placeholder="Buscar en todo el libro…" value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: 1 }} />
-        <input type="text" placeholder="Reemplazar por…" value={r} onChange={(e) => setR(e.target.value)} style={{ flex: 1 }} />
-        <button disabled={!total} onClick={() => onReplace(q, r)}>Reemplazar todo</button>
+        <input type="text" autoFocus placeholder={t("se.find")} value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: 1 }} />
+        <input type="text" placeholder={t("se.replaceWith")} value={r} onChange={(e) => setR(e.target.value)} style={{ flex: 1 }} />
+        <button disabled={!total} onClick={() => onReplace(q, r)}>{t("se.replaceAll")}</button>
       </div>
-      {q && <p className="muted">{total} coincidencias en {hits.length} escenas</p>}
+      {q && <p className="muted">{t("se.hits", { n: total, s: hits.length })}</p>}
       <ul className="hits">
         {hits.map((h) => (
           <li key={h.scene.id} onClick={() => onOpen(h.scene.id)}>
@@ -255,37 +256,43 @@ export function CardForm({ card, cards, book, onPatch, onDelete, onOpenScene, on
   const where = mentions(book, card.name, card.alias);
   return (
     <div className="card-form">
-      <input aria-label="Nombre" value={card.name} onChange={(e) => onPatch({ name: e.target.value })} />
-      <select aria-label="Tipo" value={card.type} onChange={(e) => onPatch({ type: e.target.value as CardType })}>
-        {["Personaje", "Lugar", "Objeto", "Facción"].map((t) => <option key={t}>{t}</option>)}
+      <input aria-label={t("card.name")} value={card.name} onChange={(e) => onPatch({ name: e.target.value })} />
+      <select aria-label={t("card.type")} value={card.type} onChange={(e) => onPatch({ type: e.target.value as CardType })}>
+        {CARD_TYPES.map((k) => <option key={k} value={k}>{t(`type.${k}`)}</option>)}
       </select>
-      <input aria-label="Apodos" placeholder="Apodos o nombres cortos, separados por comas (Vero, Véronique)" value={card.alias ?? ""} onChange={(e) => onPatch({ alias: e.target.value })} />
-      <textarea placeholder="Notas…" value={card.notes} onChange={(e) => onPatch({ notes: e.target.value })} />
+      {card.type === "character" ? (
+        <>
+          <label className="cf">{t("card.alias")}<input placeholder={t("card.alias.ph")} value={card.alias ?? ""} onChange={(e) => onPatch({ alias: e.target.value })} /></label>
+          {CHAR_SHORT.map((f) => <label className="cf" key={f}>{t(`card.${f}`)}<input value={card[f] ?? ""} onChange={(e) => onPatch({ [f]: e.target.value })} /></label>)}
+          {CHAR_LONG.map((f) => <label className="cf" key={f}><h4>{t(`card.${f}`)}</h4><textarea rows={3} value={card[f] ?? ""} onChange={(e) => onPatch({ [f]: e.target.value })} /></label>)}
+          {card.notes && <label className="cf"><h4>{t("card.notes.extra")}</h4><textarea rows={3} value={card.notes} onChange={(e) => onPatch({ notes: e.target.value })} /></label>}
+        </>
+      ) : <textarea placeholder={t("card.notes")} value={card.notes} onChange={(e) => onPatch({ notes: e.target.value })} />}
       <div className="links">
-        <b>Relaciones</b>
+        <b>{t("card.links")}</b>
         {(card.links ?? []).map((l, i) => (
           <div key={i} className="row">
-            {cards.find((c) => c.id === l.to)?.name ?? "(borrada)"} — {l.label}
-            <button aria-label="Quitar relación" onClick={() => onPatch({ links: (card.links ?? []).filter((_, j) => j !== i) })}>×</button>
+            {cards.find((c) => c.id === l.to)?.name ?? t("card.deleted")} — {l.label}
+            <button aria-label={t("card.unlink")} onClick={() => onPatch({ links: (card.links ?? []).filter((_, j) => j !== i) })}>×</button>
           </div>
         ))}
-        <select value="" aria-label="Relacionar con" onChange={async (e) => {
+        <select value="" aria-label={t("card.relateWith")} onChange={async (e) => {
           const to = e.target.value;
-          const label = to ? await ask("Tipo de relación (ej. hermano de, vive en)") : null;
+          const label = to ? await ask(t("card.relType")) : null;
           if (to && label) onPatch({ links: [...(card.links ?? []), { to, label }] });
         }}>
-          <option value="">+ Relacionar con…</option>
+          <option value="">{t("card.relate")}</option>
           {cards.filter((c) => c.id !== card.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
       <div className="links">
-        <b>Aparece en</b>
+        <b>{t("card.appears")}</b>
         {where.length ? (
           <div className="chips">{where.map(({ scene }) => <button key={scene.id} className="chip" onClick={() => onOpenScene(scene.id)}>{scene.title}</button>)}</div>
-        ) : <span className="muted">Ninguna escena menciona «{card.name}».</span>}
+        ) : <span className="muted">{t("card.noScenes", { name: card.name })}</span>}
       </div>
-      {onBack && <button onClick={onBack}>← Volver al mapa</button>}
-      <button onClick={onDelete}>Eliminar ficha</button>
+      {onBack && <button onClick={onBack}>{t("card.back")}</button>}
+      <button onClick={onDelete}>{t("card.delete")}</button>
     </div>
   );
 }

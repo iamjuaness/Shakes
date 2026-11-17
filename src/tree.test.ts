@@ -145,3 +145,13 @@ console.log("tree ok");
   assert.equal(t.book.children.length, TEMPLATES[0].parts.length, "plantilla: partes");
   console.log("blank ok");
 }
+
+// Tipos de ficha: los proyectos antiguos (español) se migran a ids, también dentro de las versiones
+{
+  const old = { book: sampleBook(), cards: [{ id: "1", type: "Lugar", name: "A", notes: "" }, { id: "2", type: "Raro", name: "B", notes: "" }], versions: [{ id: "v", at: "", label: "", book: sampleBook(), cards: [{ id: "1", type: "Personaje", name: "A", notes: "" }] }] };
+  const p = normalize(old);
+  assert.deepEqual(p.cards.map((c) => c.type), ["place", "character"], "tipo antiguo → id; desconocido → character");
+  assert.equal(p.versions[0].cards[0].type, "character");
+  assert.equal(normalize(p).cards[0].type, "place", "idempotente");
+  console.log("cards ok");
+}

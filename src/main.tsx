@@ -3,9 +3,11 @@ import ReactDOM from "react-dom/client";
 import Root from "./Root";
 import { idbGet } from "./store";
 import { normalize } from "./tree";
+import { loadSettings } from "./settings";
 
 // Carga el proyecto (IndexedDB; migra el localStorage del formato anterior) y el handle del archivo antes de pintar.
 async function boot() {
+  await loadSettings(); // idioma y tema antes del primer pintado
   let project: ReturnType<typeof normalize> | null = null; // sin proyecto guardado: pantalla de inicio
   try {
     const saved = await idbGet<unknown>("project");

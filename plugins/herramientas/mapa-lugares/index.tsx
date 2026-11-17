@@ -9,7 +9,7 @@ function Panel({ host }: { host: ToolHost }) {
   const d: Datos = host.project.ext?.["mapa-lugares"] ?? { pins: {} };
   const save = (n: Datos) => host.setProject((p) => ({ ...p, ext: { ...p.ext, "mapa-lugares": n } }));
   const [sel, setSel] = useState<string | null>(null);
-  const places = host.cards.filter((c) => c.type === "Lugar");
+  const places = host.cards.filter((c) => c.type === "place");
   async function pick() {
     const f = await elegir("image/*");
     if (!f) return;

@@ -34,7 +34,7 @@ export function prefixAt(before: string): { text: string; start: number } | null
 
 const STOP = new Set(["ayer", "hoy", "mañana", "anoche", "después", "antes", "pronto", "quizá", "el", "la", "los", "las", "un", "una", "y", "o", "pero", "pues", "si", "no", "que", "como", "cuando", "mientras", "entonces", "luego", "ahora", "aquí", "allí", "ya", "yo", "tú", "él", "ella", "ellos", "nosotros", "esto", "eso", "esta", "este", "esa", "ese", "dios", "señor", "señora", "doña", "don", "mi", "su", "tu", "en", "de", "a", "por", "con", "sin", "al", "del", "se", "me", "te", "lo", "le", "es", "fue", "era", "hay", "sí", "tal", "cada", "todo", "nada", "algo", "nunca", "siempre", "también", "aunque", "porque", "sobre", "tras", "hasta", "desde", "hacia", "ante", "bajo", "durante", "según"]);
 
-export interface Candidate { name: string; type: "Personaje" | "Lugar"; context: string }
+export interface Candidate { name: string; type: "character" | "place"; context: string }
 
 // Nombres propios probables que aún no tienen ficha: secuencias de palabras con mayúscula que NO abren frase
 // (o abren frase pero tienen 2+ palabras), no son palabras vacías y no coinciden con una ficha ni con `ignored`.
@@ -56,7 +56,7 @@ export function candidates(text: string, cards: Named[], ignored: Set<string> = 
     const end = Math.min(text.length, m.index! + m[0].length + 60);
     out.set(key, {
       name: real,
-      type: ["en", "hacia", "desde", "por", "entre", "cerca"].includes(prev) ? "Lugar" : "Personaje",
+      type: ["en", "hacia", "desde", "por", "entre", "cerca"].includes(prev) ? "place" : "character",
       context: text.slice(Math.max(0, m.index! - 60), end).trim(),
     });
   }

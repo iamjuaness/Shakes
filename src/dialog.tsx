@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "./i18n";
 
 // Diálogos propios (sustituyen a prompt/confirm del navegador). Uso: await ask(...), await confirmAsk(...), await choose(...).
 interface Req { msg: string; def?: string; options?: string[]; input?: boolean; res: (v: any) => void }
@@ -37,8 +38,8 @@ export function DialogHost() {
           </div>
         )}
         <div className="row">
-          <button onClick={() => close(cancel)}>Cancelar</button>
-          {!req.options && <button className="on" autoFocus={!req.input} onClick={() => close(req.input ? val : true)}>Aceptar</button>}
+          <button onClick={() => close(cancel)}>{t("d.cancel")}</button>
+          {!req.options && <button className="on" autoFocus={!req.input} onClick={() => close(req.input ? val : true)}>{t("d.ok")}</button>}
         </div>
       </div>
     </div>

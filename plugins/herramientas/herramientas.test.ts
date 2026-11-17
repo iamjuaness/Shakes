@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { tipografia } from "./dialogo-auto/tipografia.ts";
 import { lint } from "./linter-estilo/reglas.ts";
+import { fallos, palabrasDe } from "./ortografia/revisar.ts";
 import { muletillas, repeticiones } from "./repeticiones/reglas.ts";
 import { inconsistencias } from "./inconsistencias/reglas.ts";
 import { familia } from "./arbol-genealogico/familia.ts";
@@ -11,6 +12,15 @@ import { editorial } from "./manuscrito-editorial/editorial.ts";
 import { generar } from "./generador-nombres/nombres.ts";
 import { cardToMd, nombreArchivo } from "./obsidian-sync/obsidian.ts";
 import { resumir } from "./resumen-escenas/resumen.ts";
+
+// ortografía (corrector simulado: solo conoce estas palabras)
+const dicc = { correct: (w: string) => ["hola", "mundo", "casa", "la", "es", "de"].includes(w.toLowerCase()) };
+const mal = (t: string, ok: string[] = []) => fallos(t, dicc, palabrasDe(ok)).map((f) => f.word);
+assert.deepEqual(mal("Hola mundoo, la casa."), ["mundoo"]);
+assert.deepEqual(mal("Hola Véronique. Casa de Vero."), [], "mayúscula a mitad de frase = nombre propio");
+assert.deepEqual(mal("Véronique es casa."), ["Véronique"], "al abrir frase sí se revisa");
+assert.deepEqual(mal("Véronique es casa.", ["Véronique Dupont"]), [], "nombres de fichas conocidos");
+assert.deepEqual(mal("la ONU y a"), [], "siglas y una letra no cuentan");
 
 // diálogo
 assert.deepEqual(tipografia("", '"'), { borrar: 0, texto: "«" });
@@ -93,7 +103,7 @@ assert.deepEqual(generar("Marciana", 3), []);
 
 // obsidian
 assert.equal(nombreArchivo("A/B: C"), "A-B- C.md");
-const md2 = cardToMd({ id: "1", type: "Personaje", name: "Elena", notes: "Hola", links: [{ to: "2", label: "hermana de" }] }, [{ id: "2", type: "Personaje", name: "Rosa", notes: "" } as any], ["Esc 1"]);
+const md2 = cardToMd({ id: "1", type: "character", name: "Elena", notes: "Hola", links: [{ to: "2", label: "hermana de" }] }, [{ id: "2", type: "character", name: "Rosa", notes: "" } as any], ["Esc 1"]);
 assert.ok(md2.includes("hermana de: [[Rosa]]") && md2.includes("- Esc 1") && md2.startsWith("---"));
 
 // resumen
@@ -135,4 +145,10 @@ import { sinonimos } from "./_comun/sinonimos.ts";
   const larga = Array(22).fill("uno").join(" ") + ", y " + Array(22).fill("dos").join(" ") + ".";
   assert.ok(lint(larga).find((x) => x.tipo === "larga")!.sug![0].includes(". "), "dividir frase larga");
   console.log("sustitutos ok");
+}
+
+{
+  const md = cardToMd({ id: "1", type: "character", name: "Ana", notes: "", age: "30", job: "Farera", flaw: "Orgullo" }, [], []);
+  assert.ok(md.includes("**Edad:** 30") && md.includes("### Defecto central\nOrgullo"), "personaje: campos en el md");
+  assert.ok(!cardToMd({ id: "2", type: "place", name: "X", notes: "", age: "9" }, [], []).includes("Edad"), "solo personajes");
 }

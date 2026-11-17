@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { ACEPTA, Kind, Node } from "./tree";
 import { ask, confirmAsk } from "./dialog";
+import { t } from "./i18n";
 
 interface Props {
   book: Node;
@@ -15,19 +16,19 @@ interface Props {
 }
 
 // Árbol del manuscrito: arrastrar con ratón; con teclado ↑↓ navegar, ←→ plegar, F2 renombrar, Supr eliminar, Alt+↑↓ reordenar.
-const NOM: Record<Kind, string> = { blank: "proyecto", universe: "universo", saga: "saga", book: "libro", part: "parte", chapter: "capítulo", scene: "escena" };
+const NOM = (k: Kind) => t(`kind.${k}`);
 
 export default function Tree(p: Props) {
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const toggle = (id: string) => setClosed((s) => { const n = new Set(s); if (!n.delete(id)) n.add(id); return n; });
 
   async function rename(n: Node) {
-    const t = await ask("Nuevo título", n.title);
-    if (t?.trim()) p.onRename(n.id, t.trim());
+    const title = await ask(t("d.newTitle"), n.title);
+    if (title?.trim()) p.onRename(n.id, title.trim());
   }
   async function del(n: Node) {
     const raiz = n.id === p.book.id;
-    if (await confirmAsk(raiz ? `¿Vaciar el proyecto? Se elimina "${n.title}" y todo su contenido; queda una raíz en blanco. Se guarda una copia antes.` : `¿Eliminar "${n.title}" y todo su contenido? Se guarda una copia antes.`)) p.onRemove(n.id);
+    if (await confirmAsk(raiz ? t("d.emptyProject", { t: n.title }) : t("d.deleteNode", { t: n.title }))) p.onRemove(n.id);
   }
 
   function onKey(e: KeyboardEvent<HTMLDivElement>, n: Node) {
@@ -67,12 +68,13 @@ export default function Tree(p: Props) {
           onDrop={(e) => { e.preventDefault(); p.onMove(e.dataTransfer.getData("text/plain"), n.id); }}
         >
           {n.children.length ? (
-            <button className={`caret ${open ? "open" : ""}`} tabIndex={-1} aria-label={open ? "Plegar" : "Desplegar"} onClick={(e) => { e.stopPropagation(); toggle(n.id); }} />
+            <button className={`caret ${open ? "open" : ""}`} tabIndex={-1} aria-label={open ? t("tree.fold") : t("tree.unfold")} onClick={(e) => { e.stopPropagation(); toggle(n.id); }} />
           ) : <span className="caret" />}
           <span className="label" onDoubleClick={() => rename(n)}>{n.title}</span>
+          {n.status && <span className={`stdot st-${n.status}`} title={t(`status.${n.status}`)} />}
           <span className="actions">
-            {ACEPTA[n.kind].map((k, _i, a) => <button key={k} className={a.length > 1 ? "txt" : undefined} tabIndex={-1} title={`Añadir ${NOM[k]}`} aria-label={`Añadir ${NOM[k]}`} onClick={(e) => { e.stopPropagation(); p.onAdd(n.id, k); }}>{a.length > 1 ? `+${NOM[k]}` : "+"}</button>)}
-            {<button tabIndex={-1} title="Eliminar" onClick={(e) => { e.stopPropagation(); del(n); }}>×</button>}
+            {ACEPTA[n.kind].map((k, _i, a) => <button key={k} className={a.length > 1 ? "txt" : undefined} tabIndex={-1} title={t("tree.add", { k: NOM(k) })} aria-label={t("tree.add", { k: NOM(k) })} onClick={(e) => { e.stopPropagation(); p.onAdd(n.id, k); }}>{a.length > 1 ? `+${NOM(k)}` : "+"}</button>)}
+            {<button tabIndex={-1} title={t("tree.delete")} onClick={(e) => { e.stopPropagation(); del(n); }}>×</button>}
           </span>
         </div>
         {n.children.length > 0 && open && <ul role="group">{n.children.map((c) => item(c, level + 1))}</ul>}
@@ -80,5 +82,5 @@ export default function Tree(p: Props) {
     );
   };
 
-  return <ul className="tree" role="tree" aria-label="Manuscrito">{item(p.book, 1)}</ul>;
+  return <ul className="tree" role="tree" aria-label={t("tree.label")}>{item(p.book, 1)}</ul>;
 }

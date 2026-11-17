@@ -257,7 +257,7 @@ progress::-moz-progress-bar { background: var(--accent); }
 
 /* ---------- Fichas y mapa ---------- */
 .card-form { display: flex; flex-direction: column; gap: 10px; max-width: 700px; width: 100%; margin: 32px auto; padding: 0 24px; overflow: auto; }
-.card-form input:first-child { font-size: 20px; font-weight: 650; }
+.card-form > input:first-child { font-size: 20px; font-weight: 650; }
 .card-form textarea { min-height: 260px; resize: vertical; line-height: 1.55; }
 .links { display: flex; flex-direction: column; gap: 6px; }
 .links .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
@@ -369,6 +369,7 @@ button.caret.open::before { transform: rotate(45deg); }
 .lint-inicio { text-decoration: underline dotted #2e8b57; text-underline-offset: 3px; }
 .muleti { background: rgb(230 150 40 / 24%); border-radius: 3px; }
 .lint-vago { text-decoration: underline dashed #8a6fd0; text-underline-offset: 3px; }
+.ortografia { text-decoration: underline wavy #d33; text-underline-offset: 3px; }
 .sug { cursor: pointer; }
 .sug-menu { position: fixed; z-index: 60; min-width: 160px; max-width: 280px; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / 18%); }
 .sug-menu p { margin: 0 4px 4px; font-size: 12px; color: var(--muted); line-height: 1.35; }
@@ -430,3 +431,34 @@ button.caret.open::before { transform: rotate(45deg); }
 .notas-lat-texto pre, .notas-lat-texto code { background: var(--surface); border-radius: 4px; }
 .notas-lat-texto pre { padding: 8px; overflow: auto; white-space: pre; } .notas-lat-texto code { padding: 0 4px; }
 .notas-lat-texto hr { border: 0; border-top: 1px solid var(--line); }
+
+/* ---------- Ajustes y actualizador ---------- */
+.updatebar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--accent-soft); border-bottom: 1px solid var(--line); font-size: 13px; }
+.updatenotes { max-height: 30vh; overflow: auto; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.spacer { flex: 1; }
+.settings { max-width: 720px; }
+.welcome .settings label.srow, .settings .srow { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; }
+.settings select { font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.changelog { white-space: pre-wrap; font: 12px/1.5 ui-monospace, Consolas, monospace; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; max-height: 320px; overflow: auto; }
+
+/* ---------- Barra superior: menú Archivo, campos con etiqueta, estados ---------- */
+.tabs { align-items: flex-end; }
+.tabs .menu > div { left: 0; right: auto; min-width: 230px; }
+.tabs .moremenu summary { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); border-radius: 6px 6px 0 0; padding: 6px 12px; }
+.tabs .moremenu summary.on { background: var(--surface); color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+.tabs .filemenu summary { margin-right: 6px; background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.menu > div hr { width: 100%; border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+.menu > div button { display: flex; justify-content: space-between; gap: 24px; }
+.menu kbd { font: 11px ui-monospace, Consolas, monospace; color: var(--muted); }
+.fld { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.fld input, .fld select { font: inherit; font-size: 13px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.fld input.goal { width: 72px; }
+.stdot { width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; flex: none; }
+.stdot.st-draft, .chip.st-draft { background: #c9a227; }
+.stdot.st-revised, .chip.st-revised { background: #3a86c8; }
+.stdot.st-final, .chip.st-final { background: #3f9b5b; }
+.chip.st-draft, .chip.st-revised, .chip.st-final { color: #fff; margin-left: 6px; }
+.card-form .cf { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.card-form .cf h4 { margin: 8px 0 0; font-size: 13px; color: var(--text); }
+.card-form .cf input, .card-form .cf textarea { color: var(--text); }
+.card-form .cf textarea { min-height: 72px; }
