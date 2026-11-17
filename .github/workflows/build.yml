@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           v="${GITHUB_REF_NAME#v}"
-          awk -v v="$v" '/^## [/{p=index($0,"["v"]")>0; next} p' CHANGELOG.md > RELEASE_NOTES.md
+          awk -v v="$v" 'index($0,"## [")==1{p=index($0,"["v"]")>0; next} p' CHANGELOG.md > RELEASE_NOTES.md
           [ -s RELEASE_NOTES.md ] || echo "Ver CHANGELOG.md" > RELEASE_NOTES.md
 
       - name: Publicar release
