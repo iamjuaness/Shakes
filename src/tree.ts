@@ -127,7 +127,7 @@ export function toMarkdown(n: Node, base = level[n.kind] - 1): string {
 // Ficha del mundo (personaje, lugar...).
 export type CardType = "Personaje" | "Lugar" | "Objeto" | "Facción";
 export interface Link { to: string; label: string }
-export interface Card { id: string; type: CardType; name: string; notes: string; links?: Link[]; x?: number; y?: number }
+export interface Card { id: string; type: CardType; name: string; alias?: string; notes: string; links?: Link[]; x?: number; y?: number } // alias: apodos o nombres cortos separados por comas
 export interface Version { id: string; at: string; label: string; auto?: boolean; book: Node; cards: Card[] }
 export interface DayLog { start: number; end: number }
 export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number; ext?: Record<string, any> } // ext: datos de plugins, por id de herramienta
@@ -289,10 +289,15 @@ export function replaceAll(book: Node, q: string, r: string): [Node, number] {
   return [go(book), count];
 }
 
-// Escenas donde aparece una ficha (por nombre, palabra completa).
-export function mentions(book: Node, name: string): Scene[] {
-  if (!name.trim()) return [];
-  const re = new RegExp(`(?<![\\p{L}\\d])${esc(name.trim())}(?![\\p{L}\\d])`, "iu");
+// Nombre + apodos de una ficha (separados por comas), sin vacíos ni repetidos.
+export const namesOf = (c: { name: string; alias?: string }): string[] =>
+  [...new Set([c.name, ...(c.alias ?? "").split(",")].map((s) => s.trim()).filter(Boolean))];
+
+// Escenas donde aparece una ficha (por nombre o apodo, palabra completa).
+export function mentions(book: Node, name: string, alias = ""): Scene[] {
+  const names = namesOf({ name, alias });
+  if (!names.length) return [];
+  const re = new RegExp(`(?<![\\p{L}\\d])(?:${names.map(esc).join("|")})(?![\\p{L}\\d])`, "iu");
   return scenes(book).filter(({ scene }) => re.test(plainText(scene)));
 }
 

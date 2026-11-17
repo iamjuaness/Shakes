@@ -1,5 +1,7 @@
 // Lógica pura (sin React/TipTap) del plugin «Fichas automáticas». Test: node plugins/herramientas/fichas-auto/detect.test.ts
-export interface Named { id: string; name: string; type?: string }
+export interface Named { id: string; name: string; alias?: string; type?: string }
+// Cada ficha aporta su nombre y sus apodos (separados por comas) como formas reconocibles.
+const forms = (c: Named) => [...new Set([c.name, ...(c.alias ?? "").split(",")].map((s) => s.trim()).filter(Boolean))];
 export interface Ref { from: number; to: number; id: string }
 
 const L = "\\p{L}\\d";
@@ -8,10 +10,11 @@ export const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toL
 
 // Apariciones de nombres de fichas en un texto (palabra completa; gana el nombre más largo).
 export function findRefs(text: string, cards: Named[]): Ref[] {
-  const names = cards.filter((c) => c.name.trim()).sort((a, b) => b.name.length - a.name.length);
+  const names = cards.flatMap((c) => forms(c).map((n) => ({ n, id: c.id }))).sort((a, b) => b.n.length - a.n.length);
   if (!names.length) return [];
-  const re = new RegExp(`(?<![${L}])(${names.map((c) => esc(c.name.trim())).join("|")})(?![${L}])`, "giu");
-  const byName = new Map(names.map((c) => [c.name.trim().toLowerCase(), c.id]));
+  const re = new RegExp(`(?<![${L}])(${names.map((c) => esc(c.n)).join("|")})(?![${L}])`, "giu");
+  const byName = new Map<string, string>();
+  for (const c of names) if (!byName.has(c.n.toLowerCase())) byName.set(c.n.toLowerCase(), c.id); // el nombre de una ficha gana al apodo repetido de otra
   return [...text.matchAll(re)].map((m) => ({ from: m.index!, to: m.index! + m[0].length, id: byName.get(m[0].toLowerCase())! }));
 }
 
@@ -19,8 +22,8 @@ export function findRefs(text: string, cards: Named[]): Ref[] {
 export function suggest(prefix: string, cards: Named[], limit = 6): Named[] {
   const p = fold(prefix.trim());
   if (p.length < 2) return [];
-  const hit = (c: Named) => fold(c.name).split(/\s+/).some((w) => w.startsWith(p)) || fold(c.name).startsWith(p);
-  return cards.filter((c) => hit(c) && fold(c.name) !== p).slice(0, limit);
+  const hit = (c: Named) => forms(c).some((n) => fold(n).split(/\s+/).some((w) => w.startsWith(p)) || fold(n).startsWith(p));
+  return cards.filter((c) => hit(c) && !forms(c).some((n) => fold(n) === p)).slice(0, limit);
 }
 
 // Palabra (o nombre con espacios, "Elena Marín") que termina en el cursor y empieza con mayúscula.
@@ -36,7 +39,7 @@ export interface Candidate { name: string; type: "Personaje" | "Lugar"; context:
 // Nombres propios probables que aún no tienen ficha: secuencias de palabras con mayúscula que NO abren frase
 // (o abren frase pero tienen 2+ palabras), no son palabras vacías y no coinciden con una ficha ni con `ignored`.
 export function candidates(text: string, cards: Named[], ignored: Set<string> = new Set()): Candidate[] {
-  const known = new Set(cards.map((c) => fold(c.name.trim())));
+  const known = new Set(cards.flatMap(forms).map(fold));
   const out = new Map<string, Candidate>();
   const re = new RegExp(`(?<![${L}])\\p{Lu}[${L}]{2,}(?:\\s\\p{Lu}[${L}]{2,})*(?![${L}])`, "gu");
   for (const m of text.matchAll(re)) {

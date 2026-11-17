@@ -14,7 +14,7 @@ export const obsidianSync: ToolPlugin = {
         const dir = await pick({ mode: "readwrite" });
         for (const c of host.cards) {
           const f = await (await dir.getFileHandle(nombreArchivo(c.name), { create: true })).createWritable();
-          await f.write(cardToMd(c, host.cards, mentions(host.project.book, c.name).map((m) => m.scene.title)));
+          await f.write(cardToMd(c, host.cards, mentions(host.project.book, c.name, c.alias).map((m) => m.scene.title)));
           await f.close();
         }
         host.notify(`${host.cards.length} fichas escritas en «${dir.name}»`);

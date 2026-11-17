@@ -268,7 +268,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     setRev((v) => v + 1);
   }
 
-  const sceneCards = current?.kind === "scene" ? cards.filter((c) => mentions(current, c.name).length) : [];
+  const sceneCards = current?.kind === "scene" ? cards.filter((c) => mentions(current, c.name, c.alias).length) : [];
   const dayWords = writtenOn(project.log, today());
 
   return (

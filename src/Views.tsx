@@ -252,13 +252,14 @@ export function CardForm({ card, cards, book, onPatch, onDelete, onOpenScene, on
   onOpenScene: (id: string) => void;
   onBack?: () => void;
 }) {
-  const where = mentions(book, card.name);
+  const where = mentions(book, card.name, card.alias);
   return (
     <div className="card-form">
       <input aria-label="Nombre" value={card.name} onChange={(e) => onPatch({ name: e.target.value })} />
       <select aria-label="Tipo" value={card.type} onChange={(e) => onPatch({ type: e.target.value as CardType })}>
         {["Personaje", "Lugar", "Objeto", "Facción"].map((t) => <option key={t}>{t}</option>)}
       </select>
+      <input aria-label="Apodos" placeholder="Apodos o nombres cortos, separados por comas (Vero, Véronique)" value={card.alias ?? ""} onChange={(e) => onPatch({ alias: e.target.value })} />
       <textarea placeholder="Notas…" value={card.notes} onChange={(e) => onPatch({ notes: e.target.value })} />
       <div className="links">
         <b>Relaciones</b>

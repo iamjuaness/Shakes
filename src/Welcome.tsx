@@ -27,6 +27,7 @@ export function Welcome({ onOpen, onCancel }: { onOpen: (s: Session) => void; on
   const [dir, setDir] = useState<any>(null);
   const [isDefault, setIsDefault] = useState(false);
   const [err, setErr] = useState("");
+  const [enCarpeta, setEnCarpeta] = useState(false); // crear el .shks directamente en la carpeta elegida
   const can = !!w.showDirectoryPicker;
   useEffect(() => { idbGet<any>("projectsDir").then((d) => { if (d) { setDir(d); setIsDefault(true); } }).catch(() => {}); }, []);
 
@@ -40,7 +41,7 @@ export function Welcome({ onOpen, onCancel }: { onOpen: (s: Session) => void; on
       if (!can) return await createFileOnly();
       if (!dir) return setErr("Elige la carpeta donde se creará el proyecto.");
       if ((await dir.requestPermission({ mode: "readwrite" })) !== "granted") return setErr("Sin permiso para escribir en esa carpeta.");
-      const r = await createProject(name, dir, pl.tipo, pl.tpl);
+      const r = await createProject(name, dir, pl.tipo, pl.tpl, enCarpeta);
       if (typeof r === "string") return setErr(r);
       await idbSet("projectsDir", isDefault ? dir : null);
       onOpen(r);
@@ -72,6 +73,19 @@ export function Welcome({ onOpen, onCancel }: { onOpen: (s: Session) => void; on
       onOpen({ project: normalize(JSON.parse(await (await r.handle.getFile()).text())), handle: r.handle });
     } catch { setErr("No se pudo abrir «" + r.name + "»: ¿se movió o se borró?"); }
   }
+  // Abrir carpeta: abre el único .shks que contenga; si no hay ninguno, la deja elegida para crear uno dentro.
+  async function openFolder() {
+    setErr("");
+    try {
+      const d = await w.showDirectoryPicker({ mode: "readwrite", startIn: dir ?? "documents" });
+      const files: any[] = [];
+      for await (const e of d.values()) if (e.kind === "file" && /\.(shks|shakes)$/i.test(e.name)) files.push(e);
+      if (files.length === 1) return onOpen({ project: normalize(JSON.parse(await (await files[0].getFile()).text())), handle: files[0] });
+      if (files.length > 1) return setErr(`«${d.name}» tiene ${files.length} proyectos: ábrelo con «Abrir existente…».`);
+      setDir(d); setIsDefault(false); setEnCarpeta(true);
+      setErr(`«${d.name}» no tiene ningún .shks: ponle nombre y pulsa «Crear proyecto» para crearlo aquí.`);
+    } catch (x: any) { if (x?.name !== "AbortError") setErr("No se pudo abrir la carpeta: " + (x?.message ?? x)); }
+  }
   async function open() {
     try {
       const [h] = await w.showOpenFilePicker({ types: [{ description: "Proyecto Shakes", accept: { "application/json": [".shks", ".shakes"] } }] });
@@ -84,6 +98,7 @@ export function Welcome({ onOpen, onCancel }: { onOpen: (s: Session) => void; on
       <nav className="wside">
         <h1>Shakes</h1>
         <button type="button" onClick={open} disabled={!w.showOpenFilePicker}>📂 Abrir existente…</button>
+        <button type="button" onClick={openFolder} disabled={!can}>🗂 Abrir carpeta…</button>
         {onCancel && <button type="button" onClick={onCancel}>← Volver al proyecto</button>}
       </nav>
       <main className="wmain">
@@ -101,9 +116,10 @@ export function Welcome({ onOpen, onCancel }: { onOpen: (s: Session) => void; on
           <label>Nombre<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Mi novela" /></label>
           {can && <div className="where">
             <span className="muted">Se creará en</span>
-            <strong>{dir ? `${dir.name}/${name.trim() || "…"}/` : "(sin carpeta)"}</strong>
+            <strong>{dir ? (enCarpeta ? `${dir.name}/` : `${dir.name}/${name.trim() || "…"}/`) : "(sin carpeta)"}</strong>
             <button type="button" onClick={pick}>Elegir carpeta…</button>
           </div>}
+          {can && <label className="check"><input type="checkbox" checked={enCarpeta} onChange={(e) => setEnCarpeta(e.target.checked)} /> Crear el .shks directamente en esta carpeta (sin subcarpeta)</label>}
           {can && <label className="check"><input type="checkbox" checked={isDefault} disabled={!dir} onChange={(e) => setIsDefault(e.target.checked)} /> Usar esta carpeta siempre (predeterminada)</label>}
           {!can && <p className="muted">Este navegador no puede elegir carpetas: se guardará solo el archivo .shks{w.showSaveFilePicker ? " donde lo indiques" : " como descarga"}. Con Edge o Chrome se crea la carpeta del proyecto.</p>}
           {err && <p className="warn">{err}</p>}

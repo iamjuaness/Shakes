@@ -60,8 +60,9 @@ const runXml = (r: Run) =>
 const para = (style: string | null, runs: Run[], extra = "") =>
   `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ""}${extra}</w:pPr>${runs.map(runXml).join("")}</w:p>`;
 
-function docxBody(n: Node, base = LV[n.kind] - 1): string {
-  const own = para(`Heading${lv(n, base)}`, [{ t: n.title, b: false, i: false }]);
+// El nombre de una escena no se exporta: solo se separa de la anterior con «* * *».
+function docxBody(n: Node, base = LV[n.kind] - 1, i = 0): string {
+  const own = n.kind !== "scene" ? para(`Heading${lv(n, base)}`, [{ t: n.title, b: false, i: false }]) : i > 0 ? para(null, [{ t: "* * *", b: false, i: false }], '<w:jc w:val="center"/>') : "";
   const text = n.kind === "scene"
     ? parseBlocks(n.content).map((b) =>
         /^h\d$/.test(b.tag) ? para(`Heading${head(b.tag, lv(n, base))}`, b.runs)
@@ -69,7 +70,7 @@ function docxBody(n: Node, base = LV[n.kind] - 1): string {
         : b.tag === "blockquote" ? para(null, b.runs, '<w:ind w:left="720"/>')
         : para(null, b.runs)).join("")
     : "";
-  return own + docxMeta(n) + text + n.children.map((c) => docxBody(c, base)).join("");
+  return own + docxMeta(n) + text + n.children.map((c, j) => docxBody(c, base, j)).join("");
 }
 
 const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
@@ -96,8 +97,8 @@ const inline = (runs: Run[]) =>
     return r.b && r.t !== "\n" ? `<strong>${r.i ? `<em>${t}</em>` : t}</strong>` : r.i && r.t !== "\n" ? `<em>${t}</em>` : t;
   }).join("");
 
-export function xhtmlBody(n: Node, base = LV[n.kind] - 1): string {
-  const h = `<h${lv(n, base)}>${xml(n.title)}</h${lv(n, base)}>`;
+export function xhtmlBody(n: Node, base = LV[n.kind] - 1, i = 0): string {
+  const h = n.kind !== "scene" ? `<h${lv(n, base)}>${xml(n.title)}</h${lv(n, base)}>` : i > 0 ? '<p style="text-align:center;text-indent:0">* * *</p>' : "";
   const text = n.kind === "scene"
     ? parseBlocks(n.content).map((b) =>
         /^h\d$/.test(b.tag) ? `<h${head(b.tag, lv(n, base))}>${inline(b.runs)}</h${head(b.tag, lv(n, base))}>`
@@ -105,7 +106,7 @@ export function xhtmlBody(n: Node, base = LV[n.kind] - 1): string {
         : b.tag === "blockquote" ? `<blockquote><p>${inline(b.runs)}</p></blockquote>`
         : `<p>${inline(b.runs)}</p>`).join("")
     : "";
-  return h + fichaXhtml(n) + text + n.children.map((c) => xhtmlBody(c, base)).join("");
+  return h + fichaXhtml(n) + text + n.children.map((c, j) => xhtmlBody(c, base, j)).join("");
 }
 
 const page = (title: string, body: string) =>
