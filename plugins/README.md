@@ -26,6 +26,7 @@ Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lis
 | `repeticiones` | Subraya repeticiones y muletillas; clic = menú de sustitutos | Editor |
 | `linter-estilo` | Adverbios, pasiva, gramática, frases largas…; clic = alternativas | Editor |
 | `notas-margen` | Notas sobre texto seleccionado | Editor |
+| `notas-laterales` | Panel derecho con un .md/.txt de notas previas | Editor |
 | `sesion-pomodoro` | Temporizador 25/5 y palabras de la sesión | Editor |
 | `maquina-escribir` | Línea de escritura centrada | Editor |
 | `inconsistencias` | Ficha vs escenas (ojos, pelo, edad) | Pestaña |

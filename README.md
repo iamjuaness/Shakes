@@ -150,7 +150,7 @@ npx tsc --noEmit
 ## Publicar una versión
 
 1. Sube la versión en `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json` (las tres iguales).
-2. `git tag v0.2.0 && git push origin v0.2.0`.
+2. `git tag v0.4.0 && git push origin v0.3.0`.
 
 El CI compila el instalador y lo adjunta al release.
 
