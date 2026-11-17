@@ -359,15 +359,6 @@ button.caret.open::before { transform: rotate(45deg); }
 .tramas td:first-child { text-align: left; }
 
 /* Inicio / proyecto nuevo */
-.welcome { min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--text); padding: 16px; }
-.welcome form { width: min(480px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
-.welcome h1, .welcome h2 { margin: 0; }
-.welcome label { display: flex; flex-direction: column; gap: 4px; }
-.welcome label.check { flex-direction: row; align-items: center; gap: 8px; }
-.welcome .where { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.welcome .where strong { flex: 1; word-break: break-all; }
-.welcome .row { display: flex; gap: 8px; flex-wrap: wrap; }
-.welcome .warn { color: #c0392b; margin: 0; }
 /* Plugins: búsqueda y categorías */
 .panel input.grow { flex: 1; }
 .seg { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -377,3 +368,53 @@ button.caret.open::before { transform: rotate(45deg); }
 .lint-tipografia { background: rgb(120 120 120 / 22%); border-radius: 2px; }
 .lint-inicio { text-decoration: underline dotted #2e8b57; text-underline-offset: 3px; }
 .muleti { background: rgb(230 150 40 / 24%); border-radius: 3px; }
+.lint-vago { text-decoration: underline dashed #8a6fd0; text-underline-offset: 3px; }
+.sug { cursor: pointer; }
+.sug-menu { position: fixed; z-index: 60; min-width: 160px; max-width: 280px; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / 18%); }
+.sug-menu p { margin: 0 4px 4px; font-size: 12px; color: var(--muted); line-height: 1.35; }
+.sug-menu button { text-align: left; border: none; background: none; padding: 5px 8px; border-radius: 5px; white-space: normal; }
+.sug-menu button:hover, .sug-menu button:focus-visible { background: var(--accent-soft); color: var(--accent); }
+.sug-menu button.quitar { color: var(--muted); font-style: italic; }
+.item.universe::before, .item.saga::before { background: var(--accent); opacity: 1; border-radius: 2px; width: 10px; height: 10px; }
+.item.universe, .item.saga { font-weight: 700; }
+.item.universe .label::after { content: " ·universo"; font-weight: 400; color: var(--muted); font-size: 11px; }
+.item.saga .label::after { content: " ·saga"; font-weight: 400; color: var(--muted); font-size: 11px; }
+.actions button.txt { font-size: 11px; }
+.bookmeta { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+.bookmeta label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.bookmeta textarea { resize: vertical; font: inherit; }
+.bookmeta .cover { height: 140px; border-radius: 4px; border: 1px solid var(--line); }
+
+
+.welcome { height: 100vh; display: grid; grid-template-columns: 240px 1fr; background: var(--bg); color: var(--text); }
+.welcome h1, .welcome h2, .welcome h3 { margin: 0; }
+.welcome .wside { background: var(--panel); border-right: 1px solid var(--line); padding: 28px 16px; display: flex; flex-direction: column; gap: 8px; }
+.welcome .wside h1 { font-size: 1.8rem; margin-bottom: 20px; }
+.welcome .wside button { text-align: left; padding: 10px 12px; border: 0; background: none; border-radius: var(--radius); }
+.welcome .wside button:hover:not(:disabled) { background: var(--accent-soft); }
+.welcome .wmain { overflow: auto; padding: 36px 48px; display: flex; flex-direction: column; gap: 20px; max-width: 1100px; width: 100%; }
+.welcome .wmain h2 { font-size: 1.3rem; font-weight: 400; }
+.welcome .plantillas { display: flex; gap: 16px; flex-wrap: wrap; }
+.welcome .plantillas button { width: 150px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; padding: 8px; background: none; border: 2px solid transparent; border-radius: var(--radius); }
+.welcome .plantillas button:hover { background: var(--accent-soft); }
+.welcome .plantillas button.on { border-color: var(--accent); background: var(--accent-soft); }
+.welcome .plantillas .thumb { width: 100%; height: 110px; display: grid; place-items: center; font-size: 2.4rem; color: var(--muted); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: 2px; }
+.welcome .plantillas .thumb.blank { font-size: 3rem; color: var(--accent); }
+.welcome .plantillas small { color: var(--muted); font-size: .75rem; font-weight: normal; }
+.welcome .wform { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.welcome label { display: flex; flex-direction: column; gap: 4px; }
+.welcome label.check { flex-direction: row; align-items: center; gap: 8px; }
+.welcome .where { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.welcome .where strong { flex: 1; word-break: break-all; }
+.welcome .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.welcome .warn { color: #c0392b; margin: 0; }
+.welcome .recientes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.welcome .recientes li { display: flex; border-bottom: 1px solid var(--line); }
+.welcome .recientes li > button:first-child { flex: 1; display: flex; justify-content: space-between; gap: 16px; text-align: left; border: 0; background: none; padding: 12px 8px; min-width: 0; }
+.welcome .recientes li > button:first-child:hover { background: var(--accent-soft); }
+.welcome .recientes li .x { border: 0; background: none; }
+.welcome .recientes span { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+@media (max-width: 700px) { .welcome { grid-template-columns: 1fr; height: auto; min-height: 100vh; } .welcome .wmain { padding: 20px 16px; } }
+.welcome .plantillas { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; }
+.welcome .plantillas button { flex: none; color: var(--text); }
+.welcome .plantillas button.on strong { color: var(--text); }

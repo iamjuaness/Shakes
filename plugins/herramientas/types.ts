@@ -2,10 +2,11 @@
 // que se instala desde la pestaña Plugins (campo "tool": "<id>"). Los plugins sin código (temas, estructuras) son solo JSON.
 import type { ComponentType } from "react";
 import type { AnyExtension, Editor } from "@tiptap/react";
-import type { Card, Project } from "../../src/tree";
+import type { Card, Node, Project } from "../../src/tree";
 
 export interface ToolHost {
   project: Project;
+  scope: Node; // lo que se está exportando/mirando: el libro actual de una saga, o la raíz entera
   cards: Card[];
   setProject: (f: (p: Project) => Project) => void;
   addCard: (c: Card) => void;

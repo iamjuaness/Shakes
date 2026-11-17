@@ -26,3 +26,14 @@ export async function idbSet(key: string, value: unknown): Promise<void> {
     t.onabort = () => rej(t.error);
   });
 }
+
+// Proyectos recientes: nombre + handle del archivo (para reabrirlos desde la pantalla de inicio). Máx. 8, el último primero.
+export interface Recent { name: string; handle: any; at: number }
+export const recentList = async (): Promise<Recent[]> => (await idbGet<Recent[]>("recent").catch(() => undefined)) ?? [];
+export async function recentAdd(handle: any): Promise<void> {
+  if (!handle?.name) return; // sin handle (descarga) no se puede reabrir
+  const keep: Recent[] = [];
+  for (const r of await recentList()) if (!(await r.handle.isSameEntry?.(handle).catch(() => false))) keep.push(r);
+  await idbSet("recent", [{ name: handle.name, handle, at: Date.now() }, ...keep].slice(0, 8)).catch(() => {});
+}
+export const recentRemove = async (r: Recent) => idbSet("recent", (await recentList()).filter((x) => x.name !== r.name || x.at !== r.at)).catch(() => {});

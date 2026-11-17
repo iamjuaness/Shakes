@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Card, Node, Project, TEMPLATES, addChild, applyTemplate, countWords, find, logWords, mentions, move, normalize, remove, replaceAll, restore, search, shift, snapshot, toMarkdown, today, totalWords, update, writtenOn } from "./tree";
+import { Card, Node, Project, TEMPLATES, addChild, esContenedor, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, normalize, remove, replaceAll, restore, search, shift, snapshot, toMarkdown, today, totalWords, update, wrapIn, writtenOn } from "./tree";
 import { Analysis, CardForm, Corkboard, RelationMap, SearchPanel, Timeline, Versions } from "./Views";
 import Tree from "./TreeView";
+import { BookMeta } from "./BookMeta";
 import { DialogHost, ask, choose, confirmAsk } from "./dialog";
-import { idbGet, idbSet } from "./store";
+import { idbGet, idbSet, recentAdd } from "./store";
 import { PluginState, activeTheme, allSceneTemplates, allStructures, themeCss } from "./plugins";
 import { PluginsPanel } from "./PluginsPanel";
 import { ESSENTIAL, TOOLS, catalog } from "../plugins/index";
@@ -66,12 +67,13 @@ function SceneEditor({ html, onChange, tools, host }: { html: string; onChange: 
   );
 }
 
-export default function App({ initial, handle: savedHandle, granted, onNew }: { initial: Project; handle: any; granted: boolean; onNew: () => void }) {
+export default function App({ initial, handle: savedHandle, granted, onNew, onClose }: { initial: Project; handle: any; granted: boolean; onNew: () => void; onClose: () => void }) {
   const [project, setProject] = useState<Project>(initial);
   const { book, cards, goal } = project;
   const setBook = (f: (b: Node) => Node) => setProject((p) => ({ ...p, book: f(p.book) }));
   const setCards = (f: (c: Card[]) => Card[]) => setProject((p) => ({ ...p, cards: f(p.cards) }));
-  const [selected, setSelected] = useState<string>(() => book.children[0]?.children[0]?.children[0]?.id ?? book.id);
+  const [selected, setSelected] = useState<string>(() => firstScene(book)?.id ?? book.id);
+  const [ambito, setAmbito] = useState<"libro" | "todo">("libro"); // en una saga/universo: vistas y exportación del libro actual o de todo
   const [cardId, setCardId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("book");
   const [rev, setRev] = useState(0); // fuerza recrear el editor cuando el texto cambia desde fuera (reemplazar, restaurar)
@@ -125,11 +127,12 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
   // Plugins: globales de la app (no van en el .shks). Su tema se inyecta como <style> al final del <head>.
   const [plug, setPlug] = useState<PluginState>({ plugins: [], theme: null });
   const plugLoaded = useRef(false);
-  useEffect(() => { idbGet<PluginState>("plugins").then((s) => {
-    if (s) return setPlug(s);
-    // Primera vez: se instalan los esenciales; el resto queda en «Disponibles».
-    setPlug({ plugins: catalog.filter((c) => ESSENTIAL.includes(c.id)), theme: null });
-  }).catch(() => {}).finally(() => { plugLoaded.current = true; }); }, []);
+  useEffect(() => {
+    // Primera vez (sin marca `seeded`, aunque haya un estado vacío guardado): se instalan los esenciales que falten; el resto queda en «Disponibles».
+    const seed = (s: PluginState): PluginState => s.seeded ? s : { ...s, seeded: true, plugins: [...s.plugins, ...catalog.filter((c) => ESSENTIAL.includes(c.id) && !s.plugins.some((p) => p.id === c.id))] };
+    idbGet<PluginState>("plugins").then((s) => { plugLoaded.current = true; setPlug(seed(s ?? { plugins: [], theme: null })); })
+      .catch(() => setPlug(seed({ plugins: [], theme: null }))); // no se pudo leer: esenciales en memoria, sin sobrescribir lo guardado
+  }, []);
   useEffect(() => {
     if (plugLoaded.current) idbSet("plugins", plug).catch(() => setWarn("⚠ No se pudieron guardar los plugins."));
     let el = document.getElementById("shakes-plugin-theme");
@@ -157,6 +160,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
         handle.current = h;
         setPending(null);
         idbSet("handle", h).catch(() => {});
+        recentAdd(h);
         load(normalize(JSON.parse(await (await h.getFile()).text())), h.name);
       } catch {}
       return;
@@ -173,6 +177,14 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
     input.click();
   }
 
+  // Guarda ya (sin esperar al autoguardado de 600 ms) y vuelve a la pantalla de inicio.
+  async function cerrar() {
+    try {
+      if (handle.current) { const f = await handle.current.createWritable(); await f.write(JSON.stringify(project)); await f.close(); recentAdd(handle.current); }
+    } catch { if (!(await confirmAsk("No se pudo guardar el archivo. ¿Cerrar de todos modos?"))) return; }
+    onClose();
+  }
+
   async function saveAs() {
     if (!w.showSaveFilePicker) {
       saveBlob(`${book.title}.shks`, new Blob([JSON.stringify(project)], { type: "application/json" }));
@@ -183,6 +195,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
       setFileName(handle.current.name);
       setPending(null);
       idbSet("handle", handle.current).catch(() => {});
+      recentAdd(handle.current);
       setProject({ ...project }); // dispara el autoguardado
     } catch {}
   }
@@ -199,26 +212,28 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
   }, []);
 
   const current = find(book, selected);
+  const libro = bookOf(book, selected);
+  const scope = esContenedor(book.kind) && ambito === "libro" && libro ? libro : book; // raíz sobre la que trabajan corcho, línea, estilo y exportación
   const card = cards.find((c) => c.id === cardId);
   const words = totalWords(book);
   const patchCard = (id: string, patch: Partial<Card>) => setCards((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   const openScene = (id: string) => { setSelected(id); setTab("book"); };
-  const host: ToolHost = { project, setProject, openScene, notify: setStatus, cards, addCard: (c) => setCards((cs) => [...cs, c]), patchCard, openCard: (id) => { setCardId(id); setTab("cards"); } };
+  const host: ToolHost = { project, scope, setProject, openScene, notify: setStatus, cards, addCard: (c) => setCards((cs) => [...cs, c]), patchCard, openCard: (id) => { setCardId(id); setTab("cards"); } };
 
   async function exportAs(kind: "md" | "docx" | "epub" | "pdf", el: HTMLElement) {
     el.closest("details")?.removeAttribute("open");
-    if (kind === "md") return saveBlob(`${book.title}.md`, new Blob([toMarkdown(book)], { type: "text/markdown" }));
+    if (kind === "md") return saveBlob(`${scope.title}.md`, new Blob([toMarkdown(scope)], { type: "text/markdown" }));
     const x = await import("./export"); // carga bajo demanda (fflate)
     if (kind === "pdf") {
       const f = document.createElement("iframe");
       f.style.cssText = "position:fixed;width:0;height:0;border:0";
-      f.srcdoc = x.printHtml(book);
+      f.srcdoc = x.printHtml(scope);
       f.onload = () => { f.contentWindow?.focus(); f.contentWindow?.print(); setTimeout(() => f.remove(), 60_000); };
       return void document.body.appendChild(f);
     }
     const docx = kind === "docx";
-    const data = await x.zip(docx ? x.toDocxFiles(book) : x.toEpubFiles(book));
-    saveBlob(`${book.title}.${kind}`, new Blob([data as BlobPart], { type: docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/epub+zip" }));
+    const data = await x.zip(docx ? x.toDocxFiles(scope) : x.toEpubFiles(scope));
+    saveBlob(`${scope.title}.${kind}`, new Blob([data as BlobPart], { type: docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/epub+zip" }));
   }
 
   async function replaceEverywhere(q: string, r: string) {
@@ -229,6 +244,15 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
     setProject((p) => ({ ...snapshot(p, "Antes de reemplazar", true), book: b }));
     setRev((v) => v + 1);
     setStatus(`${n} reemplazos`);
+  }
+
+  // El proyecto actual pasa a ser el primer libro de una saga (o la saga, una parte de un universo). Antes se guarda una copia.
+  async function convertir() {
+    const kind = book.kind === "book" ? "saga" : "universe";
+    const t = await ask(kind === "saga" ? "Nombre de la saga" : "Nombre del universo", kind === "saga" ? `Saga de ${book.title}` : `Universo de ${book.title}`);
+    if (!t?.trim()) return;
+    setProject((p) => ({ ...snapshot(p, kind === "saga" ? "Antes de crear la saga" : "Antes de crear el universo", true), book: wrapIn(p.book, kind, t.trim()) }));
+    setAmbito("libro");
   }
 
   async function addTemplate() {
@@ -260,11 +284,13 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
           <div className="rgroup">
             <div className="rbtns">
               <button onClick={onNew}>Nuevo</button>
+              <button title="Guardar y volver a la pantalla de inicio" onClick={cerrar}>Cerrar proyecto</button>
               <button onClick={openFile}>Abrir</button>
               <button onClick={saveAs}>Guardar como…</button>
               <details className="menu">
                 <summary>Exportar ▾</summary>
                 <div>
+                  {esContenedor(book.kind) && <span className="muted">Se exporta: {scope.kind === "book" ? `«${scope.title}»` : "todo"}</span>}
                   {([["md", "Markdown (.md)"], ["docx", "Word (.docx)"], ["epub", "EPUB (.epub)"], ["pdf", "PDF (imprimir)"]] as const).map(([k, l]) => (
                     <button key={k} onClick={(e) => exportAs(k, e.currentTarget)}>{l}</button>
                   ))}
@@ -294,6 +320,8 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
           )}
           <div className="rgroup">
             <div className="rbtns">
+              {esContenedor(book.kind) && <button title="Qué usan Corcho, Línea, Estilo y Exportar" onClick={() => setAmbito(ambito === "libro" ? "todo" : "libro")}>Ámbito: {ambito === "libro" ? "libro actual" : "todo"}</button>}
+              {(book.kind === "book" || book.kind === "saga") && <button onClick={convertir}>{book.kind === "book" ? "Convertir en saga" : "Convertir en universo"}</button>}
               <button onClick={async () => {
                 const g = Number(await ask("Meta de palabras del libro (0 = sin meta)", String(goal)));
                 if (Number.isFinite(g) && g >= 0) setProject((p) => ({ ...p, goal: Math.floor(g) }));
@@ -332,13 +360,14 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
             book={book}
             selected={selected}
             onSelect={setSelected}
-            onAdd={(id) => {
-              const [b, child] = addChild(book, id);
+            onAdd={(id, kind) => {
+              const [b, child] = addChild(book, id, kind);
               setBook(() => b);
               if (child) setSelected(child.id);
             }}
             onRemove={(id) => {
-              const b = remove(book, id);
+              // Borrar la raíz la deja en blanco (vacía y sin tipo); el resto se quita del árbol.
+              const b: Node = id === book.id ? { id: book.id, kind: "blank", title: book.title, children: [] } : remove(book, id);
               setProject((p) => ({ ...snapshot(p, "Antes de eliminar", true), book: b }));
               if (!find(b, selected)) setSelected(book.id);
             }}
@@ -377,13 +406,13 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
         ) : tab === "plugins" ? (
           <PluginsPanel state={plug} onChange={setPlug} onMsg={flash} tools={TOOLS} catalog={catalog} />
         ) : tab === "timeline" ? (
-          <Timeline book={book} onSelect={openScene} onDate={(id, date) => setBook((b) => update(b, id, (n) => ({ ...n, date })))} />
+          <Timeline book={scope} onSelect={openScene} onDate={(id, date) => setBook((b) => update(b, id, (n) => ({ ...n, date })))} />
         ) : tab === "cork" ? (
-          <Corkboard book={book} onSelect={openScene} onSummary={(id, summary) => setBook((b) => update(b, id, (n) => ({ ...n, summary })))} />
+          <Corkboard book={scope} onSelect={openScene} onSummary={(id, summary) => setBook((b) => update(b, id, (n) => ({ ...n, summary })))} />
         ) : tab === "search" ? (
           <SearchPanel book={book} onOpen={openScene} onReplace={replaceEverywhere} />
         ) : tab === "style" ? (
-          <Analysis book={book} current={current} cards={cards} project={project}
+          <Analysis book={scope} current={current} cards={cards} project={project}
             onDailyGoal={async () => {
               const g = Number(await ask("Meta diaria de palabras (0 = sin meta)", String(project.dailyGoal)));
               if (Number.isFinite(g) && g >= 0) setProject((p) => ({ ...p, dailyGoal: Math.floor(g) }));
@@ -428,6 +457,8 @@ export default function App({ initial, handle: savedHandle, granted, onNew }: { 
               onChange={(html) => setBook((b) => update(b, current.id, (n) => ({ ...n, content: html })))}
             />
           </>
+        ) : current && (current.kind === "book" || current.kind === "saga" || current.kind === "universe") ? (
+          <BookMeta key={current.id} node={current} onChange={(meta) => setBook((b) => update(b, current.id, (n) => ({ ...n, meta })))} />
         ) : (
           <p className="empty">Selecciona o crea una escena para escribir.<br />Doble clic o F2 renombra. Arrastra, o usa Alt+↑↓, para reordenar. Ctrl+F busca en todo el libro.</p>
         )}

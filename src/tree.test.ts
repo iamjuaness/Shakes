@@ -1,6 +1,6 @@
 // Ejecutar: node src/tree.test.ts
 import assert from "node:assert/strict";
-import { TEMPLATES, applyTemplate, dialogueShare, diffVersions, logWords, mentions, replaceAll, search, shift, writtenOn, analyze, chronological, plainText, restore, scenes, snapshot, addChild, countWords, find, move, normalize, remove, sampleBook, toMarkdown, totalWords, update } from "./tree.ts";
+import { TEMPLATES, applyTemplate, dialogueShare, diffVersions, logWords, mentions, replaceAll, search, shift, writtenOn, analyze, chronological, plainText, restore, scenes, snapshot, addChild, countWords, find, move, newProject, normalize, remove, sampleBook, toMarkdown, totalWords, update } from "./tree.ts";
 
 const b = sampleBook();
 const scene = b.children[0].children[0].children[0];
@@ -96,3 +96,52 @@ assert.equal(st2.readability > 0 && st2.readability < 120, true);
 const dl = update(b, scene.id, (n) => ({ ...n, content: "<p>—Hola amigo</p><p>Él sonrió despacio</p>" }));
 assert.equal(dialogueShare(dl), 40);
 console.log("tree ok");
+
+// ---- sagas y universos ----
+{
+  const t = await import("./tree.ts");
+  const e = await import("./export.ts");
+  const libro = sampleBook();
+  const saga = t.wrapIn(libro, "saga", "Trilogía");
+  assert.equal(saga.kind, "saga");
+  assert.equal(saga.children[0], libro, "el libro original es el primero");
+  const [s2, l2] = addChild(saga, saga.id);
+  assert.equal(l2!.kind, "book", "+ en una saga crea un libro");
+  assert.equal(t.books(s2).length, 2);
+  const uni = t.wrapIn(saga, "universe", "Mundo");
+  const [, hijo] = addChild(uni, uni.id, "book");
+  assert.equal(hijo!.kind, "book", "un universo admite libros sueltos");
+  assert.equal(addChild(uni, uni.id)[1]!.kind, "saga", "por defecto crea saga");
+  assert.equal(addChild(saga, saga.id, "part")[1]!.kind, "book", "una saga no admite partes: crea libro");
+  // mover un libro a otra saga
+  const [u2, sagaB] = addChild(uni, uni.id, "saga");
+  const mov = move(u2, libro.id, sagaB!.id);
+  assert.equal(find(mov, sagaB!.id)!.children[0].id, libro.id, "libro -> otra saga");
+  // rutas y localización
+  const sc = t.firstScene(s2)!;
+  assert.equal(t.bookOf(s2, sc.id)!.id, libro.id);
+  assert.equal(scenes(s2)[0].path, "Mi historia › Parte 1 › Capítulo 1".replace("Mi historia › ", "Mi historia › "), "la ruta incluye el libro");
+  assert.equal(normalize({ book: saga }).book.kind, "saga", "se guarda y abre una saga");
+  const p = t.newProject("saga", "Mi trilogía");
+  assert.equal(p.book.title, "Mi trilogía");
+  assert.equal(p.book.children[0].kind, "book");
+  // exportación: encabezados relativos a la raíz
+  assert.ok(toMarkdown(saga).startsWith("# Trilogía\n\n## Mi historia\n\n### Parte 1"), "markdown de saga");
+  assert.ok(toMarkdown(libro).startsWith("# Mi historia\n\n## Parte 1"), "un libro suelto no cambia");
+  assert.ok(e.xhtmlBody(saga).startsWith("<h1>Trilogía</h1><h2>Mi historia</h2>"));
+  console.log("saga ok");
+}
+
+{
+  const b = newProject("blank", "Vacío");
+  assert.equal(b.book.kind, "blank");
+  assert.equal(b.book.children.length, 0, "en blanco: sin hijos");
+  const [r1, s] = addChild(b.book, b.book.id);
+  assert.equal(s?.kind, "scene", "en blanco: «+» crea escena directa");
+  const [, lib] = addChild(r1, b.book.id, "book");
+  assert.equal(lib?.kind, "book", "en blanco: admite libro");
+  assert.equal(normalize(JSON.parse(JSON.stringify(b))).book.kind, "blank", "normalize conserva blank");
+  const t = newProject("book", "X", TEMPLATES[0]);
+  assert.equal(t.book.children.length, TEMPLATES[0].parts.length, "plantilla: partes");
+  console.log("blank ok");
+}

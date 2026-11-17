@@ -23,8 +23,8 @@ Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lis
 |---|---|---|
 | `fichas-auto` | Detecta nombres nuevos, sugiere fichas, resalta y abre ficha lateral | Editor |
 | `dialogo-auto` | `"` → « », `--` → — | Editor |
-| `repeticiones` | Subraya repeticiones cercanas, con sugerencias | Editor |
-| `linter-estilo` | Adverbios, pasiva, frases largas | Editor |
+| `repeticiones` | Subraya repeticiones y muletillas; clic = menú de sustitutos | Editor |
+| `linter-estilo` | Adverbios, pasiva, gramática, frases largas…; clic = alternativas | Editor |
 | `notas-margen` | Notas sobre texto seleccionado | Editor |
 | `sesion-pomodoro` | Temporizador 25/5 y palabras de la sesión | Editor |
 | `maquina-escribir` | Línea de escritura centrada | Editor |

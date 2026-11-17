@@ -13,7 +13,7 @@ export interface Plugin {
   sceneTemplates: SceneTpl[];
   tool?: string; // id de una herramienta con código incluida en la app (carpeta plugins/herramientas)
 }
-export interface PluginState { plugins: Plugin[]; theme: string | null } // theme = "idPlugin:índice"
+export interface PluginState { plugins: Plugin[]; theme: string | null; seeded?: boolean } // theme = "idPlugin:índice"
 
 // Variables CSS que un tema puede cambiar (las de :root en App.css).
 export const THEME_VARS = ["--bg", "--surface", "--panel", "--text", "--muted", "--accent", "--accent-soft", "--on-accent", "--line", "--shadow", "--radius", "--font"];

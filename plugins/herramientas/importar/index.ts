@@ -13,12 +13,15 @@ async function anadir(host: ToolHost, nombre: string, bloques: Bloque[]) {
   const titulo = nombre.replace(/\.[^.]+$/, "");
   const lista = estructura(bloques, titulo);
   if (!lista.length) return host.notify("⚠ El archivo no tiene texto.");
-  if (!(await confirmAsk(`¿Reemplazar todo el libro por «${nombre}»? Antes se guarda una copia en Versiones.`))) return;
+  const raiz = host.project.book;
+  const enSaga = raiz.kind !== "book"; // en una saga/universo el archivo entra como libro nuevo; no se pisa nada
+  if (!(await confirmAsk(enSaga ? `¿Añadir «${nombre}» como libro nuevo de «${raiz.title}»?` : `¿Reemplazar todo el libro por «${nombre}»? Antes se guarda una copia en Versiones.`))) return;
   const children = lista.map(aNodo);
-  host.setProject((p) => ({ ...snapshot(p, "Antes de importar", true), book: { ...p.book, title: titulo, children } }));
+  const libro: Node = { ...newNode("book", 0), title: titulo, children };
+  host.setProject((p) => ({ ...snapshot(p, "Antes de importar", true), book: enSaga ? { ...p.book, children: [...p.book.children, libro] } : { ...p.book, title: titulo, children } }));
   const first = children.map(primeraEscena).find(Boolean);
   if (first) host.openScene(first.id);
-  host.notify(`Libro reemplazado con la estructura de ${nombre}`);
+  host.notify(enSaga ? `Libro «${titulo}» añadido` : `Libro reemplazado con la estructura de ${nombre}`);
 }
 
 export const importar: ToolPlugin = {

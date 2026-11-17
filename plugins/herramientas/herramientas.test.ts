@@ -100,3 +100,39 @@ assert.ok(md2.includes("hermana de: [[Rosa]]") && md2.includes("- Esc 1") && md2
 assert.equal(resumir("Uno. Dos. Tres."), "Uno. Dos.");
 assert.ok(resumir("x".repeat(500)).length <= 200);
 console.log("herramientas ok");
+
+// ---- sustitutos ----
+import { sinonimos } from "./_comun/sinonimos.ts";
+{
+  const s = (w: string) => sinonimos(w);
+  assert.ok(s("dijo").includes("afirmó"), "irregular -> pretérito 3s");
+  assert.ok(s("dijeron").includes("afirmaron"), "plural");
+  assert.ok(s("miró").includes("observó"), "regular");
+  assert.ok(s("caminaba").includes("avanzaba"), "imperfecto");
+  assert.ok(s("grandes").includes("enormes"), "plural adj");
+  assert.ok(s("pequeña").includes("diminuta"), "femenino");
+  assert.ok(s("casas").includes("hogares") || s("casas").includes("viviendas"), "plural nombre");
+  assert.ok(s("Miró").includes("Observó"), "mayúscula inicial");
+  assert.ok(!s("paso").some((x) => /ó$/.test(x)), "«paso» no es verbo");
+  const pas = (t: string) => lint(t).find((x) => x.tipo === "pasiva")!.sug;
+  assert.deepEqual(pas("La casa fue construida."), ["se construyó"], "irregular -ido");
+  assert.deepEqual(pas("Las puertas fueron abiertas."), ["se abrieron"]);
+  assert.deepEqual(pas("La carta ha sido escrita."), ["se ha escrito"]);
+  assert.deepEqual(pas("El pacto será hecho."), ["se hará"]);
+  assert.deepEqual(pas("La carta era hecha por Ana.") ?? [], [], "con agente no se propone");
+  assert.ok(sinonimos("abrazó").includes("estrechó"), "diccionario ampliado");
+  assert.ok(sinonimos("tarde").length > 0 && sinonimos("rostro").length > 0);
+  assert.deepEqual(s("xyzzy"), []);
+  assert.ok(repeticiones("Miró la puerta y luego miró otra vez.").some((r) => r.sugerencias.includes("observó")), "repe con sustitutos");
+  assert.ok(muletillas("Digamos que no.").every((m) => m.sugerencias.length > 0), "muletillas con sustitutos");
+  const l = lint("Caminó rápidamente hacia la casa.");
+  assert.ok(l.find((x) => x.tipo === "adverbio")!.sug!.includes("deprisa"), "adverbio");
+  assert.ok(lint("Era muy grande.").some((x) => x.tipo === "vago" && x.sug![0] === "enorme"), "muy grande");
+  assert.deepEqual(lint("La carta fue enviada.").find((x) => x.tipo === "pasiva")!.sug, ["se envió"]);
+  assert.deepEqual(lint("Las cartas fueron enviadas.").find((x) => x.tipo === "pasiva")!.sug, ["se enviaron"]);
+  assert.deepEqual(lint("Pienso de que es tarde.").find((x) => x.tipo === "gramatica")!.sug, ["Pienso que"]);
+  assert.deepEqual(lint("Hay  dos espacios.").find((x) => x.tipo === "tipografia")!.sug, [" "]);
+  const larga = Array(22).fill("uno").join(" ") + ", y " + Array(22).fill("dos").join(" ") + ".";
+  assert.ok(lint(larga).find((x) => x.tipo === "larga")!.sug![0].includes(". "), "dividir frase larga");
+  console.log("sustitutos ok");
+}

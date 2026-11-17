@@ -9,8 +9,8 @@ export const manuscritoEditorial: ToolPlugin = {
   actions: [{
     label: "Manuscrito estándar (PDF)…",
     async run(host) {
-      const autor = await ask("Nombre del autor (portada y cabecera)");
-      if (autor) imprimir(editorial(host.project.book, autor));
+      const autor = await ask("Nombre del autor (portada y cabecera)", host.scope.meta?.author ?? "");
+      if (autor) imprimir(editorial(host.scope, autor));
     },
   }],
 };

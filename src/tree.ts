@@ -1,5 +1,10 @@
-// Modelo del manuscrito: libro -> partes -> capítulos -> escenas.
-export type Kind = "book" | "part" | "chapter" | "scene";
+// Modelo del manuscrito: [universo ->] [saga ->] libro -> partes -> capítulos -> escenas.
+// La raíz del proyecto es un libro, o una saga/universo que agrupa libros (las fichas son compartidas por todos).
+// "blank": raíz sin tipo (proyecto en blanco o raíz borrada): admite cualquier nivel como hijo directo.
+export type Kind = "blank" | "universe" | "saga" | "book" | "part" | "chapter" | "scene";
+
+// Datos editoriales de un libro (o saga/universo): salen en la portada de las exportaciones.
+export interface Meta { author?: string; year?: string; blurb?: string; cover?: string; cw?: number; ch?: number } // cover = data URL de la imagen (cw×ch px)
 
 export interface Node {
   id: string;
@@ -8,18 +13,26 @@ export interface Node {
   content?: string; // HTML de la escena
   summary?: string; // sinopsis breve (corcho)
   goal?: number; // meta de palabras de la escena
+  meta?: Meta; // solo universo/saga/libro
   date?: string; // fecha en la línea de tiempo cronológica (texto libre; ordena lexicográficamente, usar ISO)
   children: Node[];
 }
 
 export const childKind: Record<Kind, Kind | null> = {
+  blank: "scene",
+  universe: "saga",
+  saga: "book",
   book: "part",
   part: "chapter",
   chapter: "scene",
   scene: null,
 };
 
-const label: Record<Kind, string> = { book: "Libro", part: "Parte", chapter: "Capítulo", scene: "Escena" };
+// Qué tipos de hijo admite cada nivel (el primero es el que crea «+»). Un universo admite sagas y libros sueltos.
+export const ACEPTA: Record<Kind, Kind[]> = { blank: ["scene", "chapter", "part", "book", "saga", "universe"], universe: ["saga", "book"], saga: ["book"], book: ["part"], part: ["chapter"], chapter: ["scene"], scene: [] };
+export const esContenedor = (k: Kind) => k === "universe" || k === "saga";
+
+const label: Record<Kind, string> = { blank: "Proyecto", universe: "Universo", saga: "Saga", book: "Libro", part: "Parte", chapter: "Capítulo", scene: "Escena" };
 
 export function newNode(kind: Kind, n: number): Node {
   return { id: crypto.randomUUID(), kind, title: `${label[kind]} ${n}`, content: kind === "scene" ? "" : undefined, children: [] };
@@ -39,9 +52,9 @@ export function update(root: Node, id: string, fn: (n: Node) => Node): Node {
   return { ...root, children: root.children.map((c) => update(c, id, fn)) };
 }
 
-export function addChild(root: Node, parentId: string): [Node, Node | null] {
+export function addChild(root: Node, parentId: string, want?: Kind): [Node, Node | null] {
   const parent = find(root, parentId);
-  const kind = parent && childKind[parent.kind];
+  const kind = parent && (want && ACEPTA[parent.kind].includes(want) ? want : childKind[parent.kind]);
   if (!kind) return [root, null];
   const child = newNode(kind, parent.children.length + 1);
   return [update(root, parentId, (p) => ({ ...p, children: [...p.children, child] })), child];
@@ -79,7 +92,7 @@ export function move(root: Node, id: string, targetId: string): Node {
   const node = find(root, id);
   const target = find(root, targetId);
   if (!node || !target || id === root.id || id === targetId || find(node, targetId)) return root;
-  if (childKind[target.kind] === node.kind) {
+  if (ACEPTA[target.kind].includes(node.kind)) {
     return update(remove(root, id), targetId, (t) => ({ ...t, children: [...t.children, node] }));
   }
   if (target.kind === node.kind) return insertBefore(remove(root, id), targetId, node);
@@ -100,11 +113,15 @@ export function htmlToMd(html = ""): string {
     .trim();
 }
 
-const level: Record<Kind, number> = { book: 1, part: 2, chapter: 3, scene: 4 };
+export const level: Record<Kind, number> = { blank: 0, universe: 1, saga: 2, book: 3, part: 4, chapter: 5, scene: 6 };
 
-export function toMarkdown(n: Node): string {
-  const own = `${"#".repeat(level[n.kind])} ${n.title}\n\n${n.kind === "scene" ? htmlToMd(n.content) + "\n\n" : ""}`;
-  return own + n.children.map(toMarkdown).join("");
+// «de Autor · 2024» y la sinopsis de un nodo con metadatos.
+export const lineaMeta = (m?: Meta) => [m?.author && `de ${m.author}`, m?.year].filter(Boolean).join(" · ");
+
+// El encabezado de la raíz es # y los demás bajan según su nivel; un libro suelto sigue empezando en #.
+export function toMarkdown(n: Node, base = level[n.kind] - 1): string {
+  const own = `${"#".repeat(Math.min(6, level[n.kind] - base))} ${n.title}\n\n${n.meta ? [lineaMeta(n.meta) && `*${lineaMeta(n.meta)}*`, n.meta.blurb && "> " + n.meta.blurb.replace(/\n+/g, " ")].filter(Boolean).join("\n\n") + "\n\n" : ""}${n.kind === "scene" ? htmlToMd(n.content) + "\n\n" : ""}`;
+  return own + n.children.map((c) => toMarkdown(c, base)).join("");
 }
 
 // Ficha del mundo (personaje, lugar...).
@@ -115,12 +132,24 @@ export interface Version { id: string; at: string; label: string; auto?: boolean
 export interface DayLog { start: number; end: number }
 export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number; ext?: Record<string, any> } // ext: datos de plugins, por id de herramienta
 
-export const newProject = (): Project => ({ book: sampleBook(), cards: [], goal: 0, versions: [], log: {}, dailyGoal: 0 });
+export type Tipo = "blank" | "book" | "saga" | "universe";
+
+// `tipo`: en blanco (raíz vacía), libro suelto, o saga/universo con un primer libro dentro; `tpl`: libro con esa estructura. `title` nombra la raíz (vacío = nombre por defecto).
+export function newProject(tipo: Tipo = "book", title = "", tpl?: Template): Project {
+  let root: Node;
+  if (tipo === "blank") root = { id: crypto.randomUUID(), kind: "blank", title: title || "Proyecto", children: [] };
+  else if (tpl) root = applyTemplate({ ...newNode("book", 1), title: title || "Mi historia" }, tpl);
+  else root = sampleBook();
+  if (tipo === "blank" || tpl) { /* ya está */ }
+  else if (tipo === "book") { if (title) root.title = title; }
+  else { root.title = "Libro 1"; root = wrapIn(root, tipo as "saga" | "universe", title || (tipo === "saga" ? "Mi saga" : "Mi universo")); }
+  return { book: root, cards: [], goal: 0, versions: [], log: {}, dailyGoal: 0 };
+}
 
 // Acepta proyectos guardados con el formato v0 (solo el libro).
 export function normalize(raw: any): Project {
   if (raw?.kind === "book") return { ...newProject(), book: raw };
-  if (raw?.book?.kind === "book") return { book: raw.book, cards: raw.cards ?? [], goal: raw.goal ?? 0, versions: raw.versions ?? [], log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {} };
+  if (["blank", "book", "saga", "universe"].includes(raw?.book?.kind)) return { book: raw.book, cards: raw.cards ?? [], goal: raw.goal ?? 0, versions: raw.versions ?? [], log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {} };
   return newProject();
 }
 
@@ -144,10 +173,20 @@ export function restore(p: Project, id: string): Project {
 
 export interface Scene { scene: Node; path: string }
 
-export function scenes(n: Node, path = ""): Scene[] {
-  const here = n.kind === "book" ? "" : path ? `${path} › ${n.title}` : n.title;
-  return n.kind === "scene" ? [{ scene: n, path }] : n.children.flatMap((c) => scenes(c, here));
+export function scenes(n: Node, path = "", raiz = true): Scene[] {
+  const here = raiz && (n.kind === "book" || esContenedor(n.kind)) ? "" : path ? `${path} › ${n.title}` : n.title; // el título de la raíz no va en la ruta
+  return n.kind === "scene" ? [{ scene: n, path }] : n.children.flatMap((c) => scenes(c, here, false));
 }
+
+export const firstScene = (n: Node): Node | undefined => (n.kind === "scene" ? n : n.children.map(firstScene).find(Boolean));
+export const books = (n: Node): Node[] => (n.kind === "book" ? [n] : n.children.flatMap(books));
+// Libro que contiene (o es) el nodo `id`; undefined si cuelga de una saga sin libro.
+export function bookOf(root: Node, id: string): Node | undefined {
+  if (root.kind === "book") return find(root, id) ? root : undefined;
+  return root.children.map((c) => bookOf(c, id)).find(Boolean);
+}
+// Convierte el proyecto en una saga/universo: la raíz actual pasa a ser su primer libro.
+export const wrapIn = (root: Node, kind: "saga" | "universe", title: string): Node => ({ ...newNode(kind, 1), title, children: [root] });
 
 // Orden cronológico: por fecha; sin fecha al final, conservando el orden narrativo (sort estable).
 export function chronological(list: Scene[]): Scene[] {
