@@ -157,7 +157,7 @@ const toolEn: Record<string, string> = {
   "tool.exportar-extra": "Export: Fountain, LaTeX, HTML", "tool.fichas-auto": "Automatic cards", "tool.generador-nombres": "Name generator", "tool.importar": "Import",
   "tool.inconsistencias": "Inconsistencies", "tool.linter-estilo": "Style linter", "tool.manuscrito-editorial": "Publisher manuscript", "tool.mapa-lugares": "Places map",
   "tool.maquina-escribir": "Typewriter", "tool.notas-laterales": "Side notes", "tool.notas-margen": "Margin notes", "tool.obsidian-sync": "Sync with Obsidian",
-  "tool.repeticiones": "Repetitions and crutch words", "tool.resumen-escenas": "Scene summaries", "tool.sesion-pomodoro": "Session and pomodoro", "tool.tramas": "Plots",
+  "tool.borrador": "Story draft", "tool.repeticiones": "Repetitions and crutch words", "tool.resumen-escenas": "Scene summaries", "tool.sesion-pomodoro": "Session and pomodoro", "tool.tramas": "Plots",
   "a.Exportar Fountain (.fountain)": "Export Fountain (.fountain)", "a.Exportar LaTeX (.tex)": "Export LaTeX (.tex)", "a.Exportar HTML (.html)": "Export HTML (.html)",
   "a.Generar nombres…": "Generate names…", "a.Importar Markdown / texto…": "Import Markdown / text…", "a.Importar Word (.docx)…": "Import Word (.docx)…",
   "a.Manuscrito estándar (PDF)…": "Standard manuscript (PDF)…", "a.Volcar fichas a una carpeta (Obsidian)…": "Dump cards to a folder (Obsidian)…", "a.Rellenar sinopsis vacías del corcho": "Fill empty corkboard synopses",

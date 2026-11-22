@@ -1,0 +1,8 @@
+{
+  "shakes": 1,
+  "id": "borrador",
+  "name": "Borrador de historia",
+  "version": "1.0.0",
+  "description": "Esboza tu historia: premisa, lluvia de ideas, estructura por beats y tablero de escenas que se convierten en escenas reales.",
+  "tool": "borrador"
+}
