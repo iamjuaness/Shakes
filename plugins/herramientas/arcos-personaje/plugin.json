@@ -4,5 +4,6 @@
   "name": "Arcos de personaje",
   "version": "1.0.0",
   "description": "Matriz de presencia de cada personaje por escena.",
-  "tool": "arcos-personaje"
+  "tool": "arcos-personaje",
+  "main": "main.js"
 }

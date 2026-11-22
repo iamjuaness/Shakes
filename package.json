@@ -3,12 +3,13 @@
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "author": "iamjuaness",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "plugins": "node scripts/build-plugins.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

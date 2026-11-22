@@ -4,5 +4,6 @@
   "name": "Importar",
   "version": "1.0.0",
   "description": "Importa Markdown, texto y Word (.docx) como escenas nuevas.",
-  "tool": "importar"
+  "tool": "importar",
+  "main": "main.js"
 }

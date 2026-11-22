@@ -11,7 +11,10 @@ export interface Plugin {
   themes: ThemeDef[];
   structures: Template[];
   sceneTemplates: SceneTpl[];
-  tool?: string; // id de una herramienta con código incluida en la app (carpeta plugins/herramientas)
+  tool?: string; // id de la herramienta con código (carpeta plugins/herramientas); si la app no la trae, se carga de `main`
+  main?: string; // archivo JS (CommonJS, generado con npm run plugins) junto al manifiesto
+  code?: string; // contenido de `main`, guardado al instalar (no viene del manifiesto)
+  base?: string; // solo catálogo en GitHub: URL de la carpeta del plugin, para bajar `main`
 }
 export interface PluginState { plugins: Plugin[]; theme: string | null; seeded?: boolean } // theme = "idPlugin:índice"
 
@@ -54,8 +57,9 @@ export function parsePlugin(raw: any): Plugin | string {
     return str(s?.name, 60) && html ? [{ name: str(s.name, 60), genre: str(s.genre, 40) || undefined, html }] : [];
   });
   const tool = str(raw.tool, 60) || undefined;
+  const main = tool && /^[\w.-]{1,60}\.js$/.test(raw.main) ? raw.main : undefined;
   if (!themes.length && !structures.length && !sceneTemplates.length && !tool) return "El plugin no aporta temas, estructuras, plantillas ni herramienta.";
-  return { id, name, version: str(raw.version, 20) || "0.0.0", description: str(raw.description, 300), themes, structures, sceneTemplates, tool };
+  return { id, name, version: str(raw.version, 20) || "0.0.0", description: str(raw.description, 300), themes, structures, sceneTemplates, tool, main };
 }
 
 // Instala (o reemplaza por id) un plugin.

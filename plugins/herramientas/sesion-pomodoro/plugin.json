@@ -4,5 +4,6 @@
   "name": "Sesión y pomodoro",
   "version": "1.0.0",
   "description": "Temporizador 25/5 y palabras escritas en la sesión con meta opcional.",
-  "tool": "sesion-pomodoro"
+  "tool": "sesion-pomodoro",
+  "main": "main.js"
 }

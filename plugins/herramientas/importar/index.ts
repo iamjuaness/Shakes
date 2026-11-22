@@ -1,3 +1,4 @@
+import { unzipSync, strFromU8 } from "fflate";
 import { Node, newNode, snapshot } from "../../../src/tree";
 import { confirmAsk } from "../../../src/dialog";
 import { elegir } from "../_comun/guardar";
@@ -41,7 +42,7 @@ export const importar: ToolPlugin = {
         const f = await elegir(".docx");
         if (!f) return;
         try {
-          const { unzipSync, strFromU8 } = await import("fflate");
+          // fflate lo presta Shakes (import estático: un import() dinámico no funciona en plugins externos)
           const xml = unzipSync(new Uint8Array(await f.arrayBuffer()))["word/document.xml"];
           await anadir(host, f.name, docxBloques(strFromU8(xml)));
         } catch { host.notify("⚠ No se pudo leer el .docx."); }

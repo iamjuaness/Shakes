@@ -4,5 +4,6 @@
   "name": "Sincronizar con Obsidian",
   "version": "1.0.0",
   "description": "Vuelca las fichas como notas .md con enlaces a una carpeta (bóveda de Obsidian).",
-  "tool": "obsidian-sync"
+  "tool": "obsidian-sync",
+  "main": "main.js"
 }

@@ -18,6 +18,7 @@ import type { Update } from "./update";
 import { Key, t, tr } from "./i18n";
 import { ESSENTIAL, TOOLS, catalog } from "../plugins/index";
 import type { ToolHost, ToolPlugin } from "./pluginApi";
+import { loadTool } from "./extTools";
 import "./App.css";
 
 type Tab = string; // pestaña fija o id de una herramienta con Panel
@@ -122,7 +123,9 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   const plugLoaded = useRef(false);
   useEffect(() => {
     // Primera vez (sin marca `seeded`, aunque haya un estado vacío guardado): se instalan los esenciales que falten; el resto queda en «Disponibles».
-    const seed = (s: PluginState): PluginState => s.seeded ? s : { ...s, seeded: true, plugins: [...s.plugins, ...catalog.filter((c) => ESSENTIAL.includes(c.id) && !s.plugins.some((p) => p.id === c.id))] };
+    // Instalaciones de antes de las herramientas externas: tenían la herramienta compilada en la app; ahora se les da su código del catálogo.
+    const migrate = (s: PluginState): PluginState => ({ ...s, plugins: s.plugins.map((p) => { const c = p.tool && !p.code && !TOOLS.some((x) => x.id === p.tool) ? catalog.find((x) => x.id === p.id) : undefined; return c?.code ? { ...p, main: c.main, code: c.code } : p; }) });
+    const seed = (s: PluginState): PluginState => migrate(s.seeded ? s : { ...s, seeded: true, plugins: [...s.plugins, ...catalog.filter((c) => ESSENTIAL.includes(c.id) && !s.plugins.some((p) => p.id === c.id))] });
     idbGet<PluginState>("plugins").then((s) => { plugLoaded.current = true; setPlug(seed(s ?? { plugins: [], theme: null })); })
       .catch(() => setPlug(seed({ plugins: [], theme: null }))); // no se pudo leer: esenciales en memoria, sin sobrescribir lo guardado
   }, []);
@@ -134,7 +137,10 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   }, [plug]);
   const structures = [...templates(), ...allStructures(plug)];
   const sceneTpls = allSceneTemplates(plug);
-  const tools = TOOLS.filter((x) => plug.plugins.some((p) => p.tool === x.id)); // herramientas instaladas
+  const tools = [ // herramientas instaladas: las incluidas en la app y las externas (código guardado con el plugin)
+    ...TOOLS.filter((x) => plug.plugins.some((p) => p.tool === x.id)),
+    ...plug.plugins.filter((p) => p.code && !TOOLS.some((x) => x.id === p.tool)).flatMap((p) => loadTool(p) ?? []),
+  ];
   const toolName = (x: ToolPlugin) => tr("tool." + x.id, x.name);
   const tabs = TABS.map((k) => ({ id: k as string, label: t(`tab.${k}`) }));
   const more = [...tools.filter((x) => x.Panel).map((x) => ({ id: x.id, label: toolName(x) })), { id: "plugins", label: t("tab.plugins") }]; // herramientas con panel y Plugins van en «Más»

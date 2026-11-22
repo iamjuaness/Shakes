@@ -4,5 +4,6 @@
   "name": "Exportar: Fountain, LaTeX, HTML",
   "version": "1.0.0",
   "description": "Exporta el libro a Fountain (guion), LaTeX y HTML.",
-  "tool": "exportar-extra"
+  "tool": "exportar-extra",
+  "main": "main.js"
 }

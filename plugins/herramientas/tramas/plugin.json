@@ -4,5 +4,6 @@
   "name": "Tramas",
   "version": "1.0.0",
   "description": "Tablero de tramas y subtramas por color, escena a escena.",
-  "tool": "tramas"
+  "tool": "tramas",
+  "main": "main.js"
 }

@@ -4,5 +4,6 @@
   "name": "Mapa de lugares",
   "version": "1.0.0",
   "description": "Sube una imagen de mapa y coloca en ella tus fichas de lugar.",
-  "tool": "mapa-lugares"
+  "tool": "mapa-lugares",
+  "main": "main.js"
 }

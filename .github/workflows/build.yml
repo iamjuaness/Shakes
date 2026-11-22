@@ -38,6 +38,7 @@ jobs:
           node src/update.test.ts
           node src/newProject.test.ts
           node src/remote.test.ts
+          node src/cjs.test.ts
           node plugins/herramientas/herramientas.test.ts
           node plugins/herramientas/fichas-auto/detect.test.ts
           npx tsc --noEmit

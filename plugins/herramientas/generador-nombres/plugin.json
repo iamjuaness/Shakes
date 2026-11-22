@@ -4,5 +4,6 @@
   "name": "Generador de nombres",
   "version": "1.0.0",
   "description": "Nombres por cultura o época; al elegir uno crea su ficha.",
-  "tool": "generador-nombres"
+  "tool": "generador-nombres",
+  "main": "main.js"
 }

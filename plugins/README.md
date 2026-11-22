@@ -1,9 +1,11 @@
-# plugins/
+﻿# plugins/
 
 Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lista «Disponibles» o «Instalar desde archivo…»).
 
 - `temas/*.json`, `estructuras/*.json`: solo datos.
-- `herramientas/<id>/`: código + `plugin.json` con `"tool": "<id>"`. Contrato en `herramientas/types.ts`; registro en `index.ts`.
+- `herramientas/<id>/`: código + `plugin.json` con `"tool": "<id>"`. Contrato en `herramientas/types.ts`.
+  - **Incluidas en la app** (solo ortografía, por sus diccionarios): registro en `index.ts`.
+  - **Externas** (se instalan sin actualizar la app): `plugin.json` con `"main": "main.js"`, sin registrar en `index.ts`. Compila con `npm run plugins` y sube `main.js` junto al manifiesto. Puede importar `react`, `@tiptap/react`, `@tiptap/pm/state|view` y `src/{tree,dialog,i18n}` (los presta Shakes); lo demás se empaqueta dentro. Debe exportar la herramienta (`export default` o export con `id` igual a `tool`).
 
 ## Temas
 | Archivo | Plugin |

@@ -1,8 +1,14 @@
-# Changelog / Novedades
+﻿# Changelog / Novedades
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Cada release de GitHub usa la sección de su versión.
 
 ## [Sin publicar]
+
+## [0.7.0] - 2026-11-21
+### Añadido
+- **Plugins con código instalables sin actualizar la app**, como las extensiones de VS Code: un `plugin.json` con `"main"` apunta a un `.js` que Shakes descarga al instalar y guarda con el plugin. Pide confirmación porque ejecuta código. Todas las herramientas pasan a este sistema (menos Ortografía, que lleva diccionarios) y las instalaciones existentes se migran solas. Nuevo plugin: **Borrador de historia** (premisa, lluvia de ideas, beats por plantilla y tablero de escenas que pasan al manuscrito).
+### Cambiado
+- Las herramientas (menos Ortografía) ya no van compiladas en la app: son plugins externos (`main.js`) y las instalaciones existentes se migran solas al abrir. Para publicar un plugin nuevo basta subir `plugins/` a GitHub: `npm run plugins` genera el `main.js`.
 
 ## [0.6.0] - 2026-11-17
 ### Añadido

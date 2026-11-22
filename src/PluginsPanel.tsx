@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type React from "react";
 import { Plugin, PluginState, install, parsePlugin, uninstall } from "./plugins";
-import { fetchRemote } from "./remote";
+import { fetchCode, fetchRemote } from "./remote";
+import { loadTool } from "./extTools";
+import { confirmAsk } from "./dialog";
 import { t } from "./i18n";
 import type { ToolPlugin } from "../plugins/herramientas/types";
 
@@ -17,8 +19,15 @@ export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state
   const load = () => { setNet("cargando"); fetchRemote().then((r) => { setRemote(r); setNet("ok"); }).catch((e) => setNet(String(e?.message ?? e))); };
   useEffect(load, []);
 
-  function add(p: Plugin) {
-    if (p.tool && !tools.some((t) => t.id === p.tool)) return onMsg(t("pg.needNew", { t: p.tool }));
+  async function add(raw: Plugin) {
+    const { base, ...p } = raw;
+    if (p.tool && !tools.some((x) => x.id === p.tool)) {
+      // La app no trae esta herramienta: se instala su código (como una extensión de VS Code).
+      if (!p.main) return onMsg(t("pg.needNew", { t: p.tool }));
+      try { p.code ??= await fetchCode(base, p.main); } catch (e: any) { return onMsg(t("pg.errCode", { n: p.name, e: e?.message ?? e })); }
+      if (!(await confirmAsk(t("pg.trust", { n: p.name })))) return;
+      if (!loadTool(p)) return onMsg(t("pg.errLoad", { n: p.name }));
+    }
     onChange(install(state, p));
     onMsg(t("pg.added", { n: p.name }));
   }
@@ -39,9 +48,12 @@ export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state
   }
   const needle = q.trim().toLowerCase();
   const match = (p: Plugin) => kind(p) === cat && (!needle || `${p.name} ${p.id} ${p.description}`.toLowerCase().includes(needle));
-  const fromGit = new Set(remote.map((p) => p.id));
   // GitHub manda (versión más nueva); lo incluido en la app completa lo que falte sin conexión.
-  const all = [...remote, ...catalog.filter((c) => !fromGit.has(c.id))];
+  // Excepción: si GitHub aún tiene el manifiesto viejo (sin "main") y la app trae la herramienta con código, se usa la de la app.
+  const merged = new Map(catalog.map((c) => [c.id, c]));
+  for (const r of remote) { const c = merged.get(r.id); if (!(c?.main && !r.main)) merged.set(r.id, r); }
+  const all = [...merged.values()];
+  const fromGit = new Set(remote.filter((r) => merged.get(r.id) === r).map((r) => r.id));
   const installed = state.plugins.filter(match);
   const available = all.filter((c) => !state.plugins.some((p) => p.id === c.id) && match(c));
   const count = (c: Cat) => state.plugins.filter((p) => kind(p) === c).length;

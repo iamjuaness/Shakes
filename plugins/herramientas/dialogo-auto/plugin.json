@@ -4,5 +4,6 @@
   "name": "Diálogo y comillas",
   "version": "1.0.0",
   "description": "Convierte \" en comillas « » y -- en raya (—) mientras escribes.",
-  "tool": "dialogo-auto"
+  "tool": "dialogo-auto",
+  "main": "main.js"
 }

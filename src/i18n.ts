@@ -70,6 +70,7 @@ const es = {
   "pg.search": "Buscar plugins…", "pg.file": "Desde archivo…", "pg.tool": "Herramientas", "pg.struct": "Estructuras", "pg.theme": "Temas", "pg.active": "Tema activo", "pg.default": "Predeterminado",
   "pg.installed": "Instalados", "pg.none": "Ninguno.", "pg.remove": "Quitar", "pg.available": "Disponibles", "pg.loading": "· buscando en GitHub…", "pg.gh": "· GitHub: {n} plugins", "pg.noGh": "· sin GitHub ({e}); se muestran los incluidos",
   "pg.refresh": "Actualizar", "pg.noHits": "Sin resultados.", "pg.allIn": "Todos instalados.", "pg.install": "Instalar", "pg.needNew": "⚠ La herramienta «{t}» necesita una versión más nueva de Shakes.", "pg.added": "Plugin «{n}» instalado",
+  "pg.trust": "«{n}» ejecuta código dentro de Shakes, con acceso a tu proyecto. Instálalo solo si confías en su autor. ¿Continuar?", "pg.errCode": "⚠ No se pudo bajar el código de «{n}»: {e}", "pg.errLoad": "⚠ «{n}» tiene código no válido o incompatible con esta versión de Shakes.",
   "pg.invalid": "⚠ Plugin no válido: {e}", "pg.badJson": "⚠ El archivo no es JSON válido.",
   // ajustes
   "set.title": "Ajustes", "set.general": "General", "set.lang": "Idioma", "set.theme": "Tema", "set.theme.auto": "Según el sistema", "set.theme.light": "Claro", "set.theme.dark": "Oscuro",
@@ -141,6 +142,7 @@ const en: Record<Key, string> = {
   "pg.search": "Search plugins…", "pg.file": "From file…", "pg.tool": "Tools", "pg.struct": "Structures", "pg.theme": "Themes", "pg.active": "Active theme", "pg.default": "Default",
   "pg.installed": "Installed", "pg.none": "None.", "pg.remove": "Remove", "pg.available": "Available", "pg.loading": "· searching GitHub…", "pg.gh": "· GitHub: {n} plugins", "pg.noGh": "· no GitHub ({e}); showing the bundled ones",
   "pg.refresh": "Refresh", "pg.noHits": "No results.", "pg.allIn": "All installed.", "pg.install": "Install", "pg.needNew": "⚠ The tool “{t}” needs a newer version of Shakes.", "pg.added": "Plugin “{n}” installed",
+  "pg.trust": "“{n}” runs code inside Shakes, with access to your project. Install it only if you trust its author. Continue?", "pg.errCode": "⚠ Couldn't download the code of “{n}”: {e}", "pg.errLoad": "⚠ “{n}” has invalid code or is incompatible with this version of Shakes.",
   "pg.invalid": "⚠ Invalid plugin: {e}", "pg.badJson": "⚠ The file is not valid JSON.",
   "set.title": "Settings", "set.general": "General", "set.lang": "Language", "set.theme": "Theme", "set.theme.auto": "Follow the system", "set.theme.light": "Light", "set.theme.dark": "Dark",
   "set.projects": "Projects", "set.dir": "Default folder for new projects", "set.dir.none": "None (asked when creating)", "set.dir.pick": "Choose folder…", "set.dir.clear": "Clear", "set.dir.unsupported": "This browser can't pick folders.",
