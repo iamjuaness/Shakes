@@ -23,3 +23,5 @@ assert.equal(candidates("Vivía en Sevilla.", [])[0].type, "place");
 assert.deepEqual(candidates("Ayer Lucas rió.", [], new Set(["lucas"])), [], "ignorados");
 assert.equal(findRefs("Vero llegó; Véronique rió.", [{ id: "v", name: "Véronique Dupont", alias: "Vero, Véronique" }]).length, 2, "apodos");
 console.log("ok");
+assert.deepEqual(candidates("Ana sube. Se oye un TRUENO y suena la ONU. Luego llega Marta.", []).map((c) => c.name), ["Marta"], "TODO MAYÚSCULAS no es un nombre");
+console.log("mayúsculas ok");

@@ -16,7 +16,7 @@ export interface Plugin {
   code?: string; // contenido de `main`, guardado al instalar (no viene del manifiesto)
   base?: string; // solo catálogo en GitHub: URL de la carpeta del plugin, para bajar `main`
 }
-export interface PluginState { plugins: Plugin[]; theme: string | null; seeded?: boolean } // theme = "idPlugin:índice"
+export interface PluginState { plugins: Plugin[]; theme: string | null; seeded?: boolean; offered?: string[] } // theme = "idPlugin:índice"; offered: esenciales nuevos ya ofrecidos
 
 // Variables CSS que un tema puede cambiar (las de :root en App.css).
 export const THEME_VARS = ["--bg", "--surface", "--panel", "--text", "--muted", "--accent", "--accent-soft", "--on-accent", "--line", "--shadow", "--radius", "--font"];

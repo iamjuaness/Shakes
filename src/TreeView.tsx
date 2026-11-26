@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
-import { ACEPTA, Kind, Node } from "./tree";
+import { ACEPTA, Kind, Node, etiqueta, formatoDe } from "./tree";
 import { ask, confirmAsk } from "./dialog";
 import { t } from "./i18n";
 
@@ -16,7 +16,6 @@ interface Props {
 }
 
 // Árbol del manuscrito: arrastrar con ratón; con teclado ↑↓ navegar, ←→ plegar, F2 renombrar, Supr eliminar, Alt+↑↓ reordenar.
-const NOM = (k: Kind) => t(`kind.${k}`);
 
 export default function Tree(p: Props) {
   const [closed, setClosed] = useState<Set<string>>(new Set());
@@ -51,6 +50,7 @@ export default function Tree(p: Props) {
 
   const item = (n: Node, level: number): ReactNode => {
     const open = !closed.has(n.id);
+    const NOM = (k: Kind) => etiqueta(k, formatoDe(p.book, n.id), false); // «poema», «entrada», «página»…
     return (
       <li key={n.id} role="none">
         <div

@@ -22,14 +22,19 @@ export default function Root({ initial, handle, granted }: { initial: Session["p
       {notes && <div className="updatenotes"><pre className="changelog">{update.notes || t("up.notes")}</pre></div>}
     </>
   );
-  if (!s || creating) {
-    return <>{bar}<Welcome update={update} onUpdate={setUpdate} onCancel={s ? () => setCreating(false) : undefined} onOpen={(x) => {
+  // Con «Nuevo» la App queda montada (oculta) debajo de la pantalla de inicio: al volver sigue igual. Antes se desmontaba
+  // y al volver se recreaba con el proyecto de cuando se abrió, y el autoguardado pisaba el archivo con esa copia vieja.
+  return <>
+    {bar}
+    {(!s || creating) && <Welcome update={update} onUpdate={setUpdate} onCancel={s ? () => setCreating(false) : undefined} onOpen={(x) => {
       idbSet("project", x.project).catch(() => {});
       idbSet("handle", x.handle).catch(() => {});
       recentAdd(x.handle);
       setS({ ...x, granted: true, n: (s?.n ?? 0) + 1 });
       setCreating(false);
-    }} /></>;
-  }
-  return <>{bar}<App key={s.n} initial={s.project} handle={s.handle} granted={s.granted} update={update} onUpdate={setUpdate} onNew={() => setCreating(true)} onClose={() => { idbSet("project", null).catch(() => {}); idbSet("handle", null).catch(() => {}); setS(null); }} /></>;
+    }} />}
+    {s && <div style={{ display: creating ? "none" : "contents" }}>
+      <App key={s.n} hidden={creating} initial={s.project} handle={s.handle} granted={s.granted} update={update} onUpdate={setUpdate} onNew={() => setCreating(true)} onClose={() => { idbSet("project", null).catch(() => {}); idbSet("handle", null).catch(() => {}); setS(null); }} />
+    </div>}
+  </>;
 }

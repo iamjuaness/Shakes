@@ -1,14 +1,16 @@
 // Puro: manuscrito en formato estándar (Shunn): Courier 12 pt, doble espacio, márgenes de 1 pulgada, cabecera con paginación.
+import { conTexto } from "../../../src/tree.ts";
 import type { Node } from "../../../src/tree.ts";
 import { esc, paras } from "../_comun/texto.ts";
 
 export function editorial(book: Node, autor: string): string {
   let words = 0;
   const walk = (n: Node, first: boolean): string => {
-    if (n.kind === "scene") {
-      const ps = paras(n.content);
-      words += ps.join(" ").split(/\s+/).filter(Boolean).length;
-      return (first ? "" : `<p class="sep">#</p>`) + ps.map((p) => `<p>${esc(p)}</p>`).join("");
+    if (conTexto(n.kind)) {
+      const ps = paras(n.content, "\u0000");
+      words += ps.filter((p) => p !== "\u0000").join(" ").split(/\s+/).filter(Boolean).length;
+      const txt = ps.map((p) => (p === "\u0000" ? `<p class="sep">#</p>` : `<p>${esc(p)}</p>`)).join("");
+      return n.kind === "chapter" ? `<h2>${esc(n.title)}</h2>${txt}` : (first ? "" : `<p class="sep">#</p>`) + txt; // escenas de proyectos antiguos: solo separador
     }
     const head = n.kind === "part" ? `<h1>${esc(n.title)}</h1>` : `<h2>${esc(n.title)}</h2>`;
     return head + n.children.map((c, i) => walk(c, i === 0 || n.kind !== "chapter")).join("");

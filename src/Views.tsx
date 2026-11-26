@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { CARD_TYPES, CHAR_LONG, CHAR_SHORT, Card, CardType, Node, Project, Style, analyze, chronological, countWords, dialogueShare, diffVersions, mentions, plainText, scenes, search, today, writtenOn } from "./tree";
+import { CARD_TYPES, CHAR_LONG, CHAR_SHORT, Card, CardType, Node, Project, Style, analyze, chronological, countWords, dialogueShare, diffVersions, esObra, mentions, plainText, scenes, search, today, writtenOn } from "./tree";
 import { ask, confirmAsk } from "./dialog";
 import { t } from "./i18n";
 
@@ -108,10 +108,11 @@ export function RelationMap({ cards, onSelect, onMove }: { cards: Card[]; onSele
 // ---------- Estilo y progreso ----------
 const level = (n: number) => t(`lv.${n < 40 ? 1 : n < 55 ? 2 : n < 65 ? 3 : n < 80 ? 4 : 5}` as "lv.1");
 
-function Stats({ s, dialogue }: { s: Style; dialogue: number }) {
+// `es`: adverbios en -mente y legibilidad INFLESZ solo tienen sentido en español.
+function Stats({ s, dialogue, es }: { s: Style; dialogue: number; es: boolean }) {
   const m: [string, string | number][] = [
     [t("stat.words"), s.words], [t("stat.sentences"), s.sentences], [t("stat.avg"), s.avgSentence], [t("stat.longest"), s.longest],
-    [t("stat.adverbs"), s.adverbs], [t("stat.dialogue"), dialogue + " %"], [t("stat.read", { l: level(s.readability) }), s.readability],
+    ...(es ? [[t("stat.adverbs"), s.adverbs] as [string, number]] : []), [t("stat.dialogue"), dialogue + " %"], ...(es ? [[t("stat.read", { l: level(s.readability) }), s.readability] as [string, number]] : []),
   ];
   return (
     <>
@@ -128,7 +129,8 @@ function Stats({ s, dialogue }: { s: Style; dialogue: number }) {
   );
 }
 
-export function Analysis({ book, current, cards, project, onDailyGoal }: { book: Node; current?: Node; cards: Card[]; project: Project; onDailyGoal: (n: number) => void }) {
+export function Analysis({ book, current, cards, project, onDailyGoal, lang }: { book: Node; current?: Node; cards: Card[]; project: Project; onDailyGoal: (n: number) => void; lang: string }) {
+  const es = /^es(-|$)/i.test(lang);
   const names = cards.map((c) => c.name);
   const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return d.toLocaleDateString("sv"); });
   const max = Math.max(project.dailyGoal, 1, ...days.map((d) => writtenOn(project.log, d)));
@@ -148,11 +150,11 @@ export function Analysis({ book, current, cards, project, onDailyGoal }: { book:
         })}
       </div>
       <h3>{t("prog.book")}</h3>
-      <Stats s={analyze(plainText(book), names)} dialogue={dialogueShare(book)} />
-      {current && current.kind !== "book" && (
+      <Stats es={es} s={analyze(plainText(book), names)} dialogue={dialogueShare(book)} />
+      {current && current.id !== book.id && !esObra(current.kind) && (
         <>
           <h3>{current.title}</h3>
-          <Stats s={analyze(plainText(current), names)} dialogue={dialogueShare(current)} />
+          <Stats es={es} s={analyze(plainText(current), names)} dialogue={dialogueShare(current)} />
         </>
       )}
     </div>

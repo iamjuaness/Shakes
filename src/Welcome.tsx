@@ -4,19 +4,22 @@ import type { Recent } from "./store";
 import { createProject, safeName } from "./newProject";
 import { newProject, templates } from "./tree";
 import { canPickDir, canSavePick, isAbort, pickProject, readHandle, saveProjectAs, writeProject } from "./fileio";
-import { t } from "./i18n";
+import { getLang, t } from "./i18n";
+import { SPELL_LANGS, langName } from "./spell";
 import { SettingsPanel } from "./SettingsPanel";
 import { getProjectsDir, setProjectsDir } from "./settings";
 import type { Update } from "./update";
-import type { Project, Template, Tipo } from "./tree";
+import type { Formato, Project, Template, Tipo } from "./tree";
 
 const w = window as any; // solo showDirectoryPicker (el resto de E/S va en fileio.ts)
 export interface Session { project: Project; handle: any }
 
 // Plantillas de inicio: la primera es un proyecto totalmente en blanco (raíz vacía, sin libro ni partes).
-const plantillas = (): { id: string; nombre: string; info: string; tipo: Tipo; tpl?: Template }[] => [
+// Después del proyecto en blanco, un tipo de obra para cada clase de escrito (novela, poesía, diario, teatro, cómic…).
+const FORMATOS_INICIO: [string, Formato, Tipo][] = [["book", "novel", "book"], ["short", "short", "book"], ["poetry", "poetry", "book"], ["essay", "essay", "book"], ["article", "article", "book"], ["diary", "diary", "book"], ["letters", "letters", "book"], ["script", "film", "script"], ["theatre", "theatre", "script"], ["comic", "comic", "script"], ["audio", "audio", "script"]];
+const plantillas = (): { id: string; nombre: string; info: string; tipo: Tipo; tpl?: Template; formato?: Formato }[] => [
   { id: "blank", nombre: t("pl.blank"), info: t("pl.blank.i"), tipo: "blank" },
-  { id: "book", nombre: t("pl.book"), info: t("pl.book.i"), tipo: "book" },
+  ...FORMATOS_INICIO.map(([id, formato, tipo]) => ({ id, nombre: t(`pl.${id}` as "pl.book"), info: t(`pl.${id}.i` as "pl.book.i"), tipo, formato })),
   { id: "saga", nombre: t("pl.saga"), info: t("pl.saga.i"), tipo: "saga" },
   { id: "universe", nombre: t("pl.universe"), info: t("pl.universe.i"), tipo: "universe" },
   ...templates().map((tp, i) => ({ id: "t" + i, nombre: tp.name, info: t("pl.tpl.i", { n: tp.parts.length }), tipo: "book" as Tipo, tpl: tp })),
@@ -26,6 +29,7 @@ const plantillas = (): { id: string; nombre: string; info: string; tipo: Tipo; t
 export function Welcome({ onOpen, onCancel, update, onUpdate }: { onOpen: (s: Session) => void; onCancel?: () => void; update: Update | null; onUpdate: (u: Update | null) => void }) {
   const [view, setView] = useState<"home" | "settings">("home");
   const [name, setName] = useState("");
+  const [lang, setLang] = useState<string>(getLang()); // idioma en que se escribirá (corrector), no el de la interfaz
   const [plId, setPlId] = useState("blank");
   const PLANTILLAS = plantillas();
   const pl = PLANTILLAS.find((p) => p.id === plId) ?? PLANTILLAS[0];
@@ -48,7 +52,7 @@ export function Welcome({ onOpen, onCancel, update, onUpdate }: { onOpen: (s: Se
       if (!can) return await createFileOnly();
       if (!dir) return setErr(t("wl.errFolder"));
       if ((await dir.requestPermission({ mode: "readwrite" })) !== "granted") return setErr(t("wl.errPerm"));
-      const r = await createProject(name, dir, pl.tipo, pl.tpl, enCarpeta);
+      const r = await createProject(name, dir, pl.tipo, pl.tpl, enCarpeta, lang, pl.formato);
       if (typeof r === "string") return setErr(r);
       await setProjectsDir(isDefault ? dir : null);
       onOpen(r);
@@ -57,7 +61,7 @@ export function Welcome({ onOpen, onCancel, update, onUpdate }: { onOpen: (s: Se
   // Sin selector de carpetas (Firefox, Safari…): no se puede crear la carpeta; se guarda solo el .shks.
   async function createFileOnly() {
     const title = name.trim();
-    const project = newProject(pl.tipo, title, pl.tpl);
+    const project = newProject(pl.tipo, title, pl.tpl, lang, pl.formato);
     const r = await saveProjectAs(project, safeName(title) || "proyecto");
     if (!r) return;
     if (r.handle) await writeProject(r.handle, project);
@@ -111,6 +115,9 @@ export function Welcome({ onOpen, onCancel, update, onUpdate }: { onOpen: (s: Se
         <form onSubmit={create} className="wform">
           <h3>{pl.nombre}</h3>
           <label>{t("wl.name")}<input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t("wl.namePh")} /></label>
+          <label>{t("wl.lang")}<select value={lang} onChange={(e) => setLang(e.target.value)}>
+            {SPELL_LANGS.map((c) => [c, langName(c)]).sort((a, b) => a[1].localeCompare(b[1])).map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+          </select></label>
           {can && <div className="where">
             <span className="muted">{t("wl.willBe")}</span>
             <strong>{dir ? (enCarpeta ? `${dir.name}/` : `${dir.name}/${name.trim() || "…"}/`) : t("wl.noFolder")}</strong>

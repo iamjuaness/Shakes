@@ -9,12 +9,24 @@ export const canPick = () => !!w.showOpenFilePicker;
 export const canSavePick = () => !!w.showSaveFilePicker;
 export const canPickDir = () => !!w.showDirectoryPicker;
 
-export function saveBlob(name: string, blob: Blob) {
+// Con selector (Chrome, Edge, escritorio) se elige dónde guardar; si no, descarga a la carpeta del navegador.
+// Devuelve el nombre con el que se guardó, o null si se canceló.
+export async function saveBlob(name: string, blob: Blob): Promise<string | null> {
+  if (canSavePick()) {
+    try {
+      const h = await w.showSaveFilePicker({ suggestedName: name });
+      const f = await h.createWritable();
+      await f.write(blob);
+      await f.close();
+      return h.name;
+    } catch (e) { if (isAbort(e)) return null; throw e; }
+  }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
   URL.revokeObjectURL(a.href);
+  return name;
 }
 
 export const isAbort = (e: any) => e?.name === "AbortError";
@@ -29,7 +41,7 @@ export async function writeProject(handle: any, project: Project): Promise<void>
 
 // Guardar como… con selector; sin File System Access API descarga el .shks y devuelve handle null.
 export async function saveProjectAs(project: Project, suggested: string): Promise<{ handle: any | null } | null> {
-  if (!canSavePick()) { saveBlob(`${suggested}.shks`, new Blob([JSON.stringify(project)], { type: "application/json" })); return { handle: null }; }
+  if (!canSavePick()) { await saveBlob(`${suggested}.shks`, new Blob([JSON.stringify(project)], { type: "application/json" })); return { handle: null }; }
   try { return { handle: await w.showSaveFilePicker({ types: SAVE_TYPES, suggestedName: `${suggested}.shks` }) }; }
   catch (e) { if (isAbort(e)) return null; throw e; }
 }

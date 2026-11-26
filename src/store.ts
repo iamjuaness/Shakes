@@ -1,4 +1,5 @@
 // Almacén del navegador en IndexedDB (sin el tope de ~5 MB de localStorage). Guarda el proyecto y el handle del archivo abierto.
+import { revivir } from "./tauriFs";
 const open = () =>
   new Promise<IDBDatabase>((res, rej) => {
     const r = indexedDB.open("shakes", 1);
@@ -11,7 +12,7 @@ export async function idbGet<T>(key: string): Promise<T | undefined> {
   const db = await open();
   return new Promise((res, rej) => {
     const r = db.transaction("kv").objectStore("kv").get(key);
-    r.onsuccess = () => res(r.result);
+    r.onsuccess = () => res(revivir(r.result)); // handles de escritorio guardados como datos -> vivos
     r.onerror = () => rej(r.error);
   });
 }

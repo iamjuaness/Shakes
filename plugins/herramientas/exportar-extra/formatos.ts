@@ -1,7 +1,7 @@
 // Puro: Fountain y LaTeX a partir del libro, la saga o el universo. (HTML y PDF salen del exportador de la app.)
 // Los niveles son relativos a la raíz exportada: un libro suelto empieza en partes; una saga, en libros; un universo, en sagas.
 // Los metadatos (autor, año, sinopsis) salen en la portada; la imagen de portada no cabe en estos formatos de texto.
-import { level, lineaMeta } from "../../../src/tree.ts";
+import { conTexto, level, lineaMeta } from "../../../src/tree.ts";
 import type { Node } from "../../../src/tree.ts";
 import { paras } from "../_comun/texto.ts";
 
@@ -10,6 +10,8 @@ export function toFountain(root: Node): string {
   const walk = (n: Node): string[] =>
     n.kind === "scene"
       ? [`.${n.title.toUpperCase()}`, ...paras(n.content)]
+      : n.kind === "chapter"
+      ? [`${"#".repeat(Math.min(Math.max(rel(n), 1), 6))} ${n.title}`, ...paras(n.content, "===")]
       : [
           `${"#".repeat(Math.min(Math.max(rel(n), 1), 6))} ${n.title}`,
           ...(n.meta?.blurb ? [`= ${n.meta.blurb.replace(/\n+/g, " ")}`] : []),
@@ -33,7 +35,7 @@ const SEC = ["part", "part", "chapter", "section", "subsection", "subsubsection"
 export function toLatex(root: Node): string {
   const rel = (n: Node) => Math.min(Math.max(level[n.kind] - level[root.kind], 1), 5);
   const walk = (n: Node): string[] =>
-    n.kind === "scene" ? [`\\${SEC[rel(n)]}*{${tex(n.title)}}`, ...paras(n.content).map(tex)]
+    conTexto(n.kind) ? [`\\${SEC[rel(n)]}${n.kind === "scene" ? "*" : ""}{${tex(n.title)}}`, ...paras(n.content, "\u0000").map((p) => (p === "\u0000" ? "\\begin{center}* * *\\end{center}" : tex(p)))]
       : [`\\${SEC[rel(n)]}{${tex(n.title)}}`, ...(n.meta && (lineaMeta(n.meta) || n.meta.blurb) ? [`\\begin{quote}\\emph{${tex(lineaMeta(n.meta))}}${n.meta.blurb ? "\n\n" + tex(n.meta.blurb) : ""}\\end{quote}`] : []), ...n.children.flatMap(walk)];
   const m = root.meta ?? {};
   return [

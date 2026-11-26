@@ -1,0 +1,9 @@
+{
+  "shakes": 1,
+  "id": "taller-creativo",
+  "name": "Taller creativo",
+  "version": "1.0.0",
+  "description": "Crea personajes completos de acuerdo a tu historia (nombre de 60 culturas y 8 épocas, oficio, virtudes, defecto, herida, mentira, arco, deseo, miedo, secreto y relación con tu protagonista), lugares, objetos, conflictos, giros, «¿y si…?», títulos, ejercicios para el bloqueo y sprints.",
+  "tool": "taller-creativo",
+  "main": "main.js"
+}

@@ -38,32 +38,38 @@ Tus datos son tuyos: archivos JSON abiertos, sin cuenta ni nube.</p>
 
 ## Características
 
-**Escritura**
-- Manuscrito en árbol: libro → partes → capítulos → escenas, con arrastrar y soltar, reordenar con `Alt+↑↓` y navegación por teclado accesible (ARIA).
-- Editor de texto enriquecido (TipTap): negrita, cursiva, títulos, listas, citas, deshacer/rehacer.
-- Modo concentración, tema claro/oscuro, metas de palabras por libro, por escena y diaria, con progreso por día.
-- Plantillas de estructura: Tres actos, Viaje del héroe, Save the Cat, Siete puntos, Fábula y Cuento.
+**Para cualquier tipo de escrito**
+- Novela, cuento, poemario, ensayo / no ficción, artículos / blog, diario, novela epistolar, guion de cine, teatro, cómic / novela gráfica y radio / pódcast. Cada tipo llama a sus piezas por su nombre (capítulo, poema, entrada, carta, página…).
+- Libros por partes y capítulos, con cambios de escena (⁂) dentro del capítulo; sagas y universos con fichas compartidas.
+- Guion con formato de industria: Tab / Intro entre elementos, autocompletado de personajes, desglose, PDF propio (Courier 12, Carta o A4) y Fountain.
 
-**Planificación**
-- Corcho con sinopsis por escena.
-- Línea de tiempo narrativa y cronológica (fecha por escena).
-- Fichas del mundo (Personaje, Lugar, Objeto, Facción) con detección de en qué escenas aparece cada una.
-- Mapa de relaciones entre fichas, con nodos arrastrables.
+**Escritura cómoda**
+- Corrector ortográfico en el idioma de cada libro (unos 90 idiomas); modo «Sin subrayados» para escribir sin el crítico interno.
+- Modo concentración, tamaño y ancho del texto, metas por capítulo, libro y día; retomas donde lo dejaste.
 
-**Revisión**
-- Análisis de estilo: longitud de frases, adverbios en *-mente*, palabras repetidas (y repeticiones cercanas), porcentaje de diálogo y legibilidad INFLESZ.
-- Búsqueda y reemplazo en todo el libro.
-- Versiones: instantáneas manuales y automáticas (cada 10 min), comparación y restauración con copia previa.
+**Creatividad**
+- Taller creativo: personajes completos de acuerdo a la historia (nombre, edad, oficio, virtudes, defecto, herida, mentira, arco, deseo, miedo, secreto y relación con el protagonista), lugares, objetos, conflictos, giros, «¿y si…?», títulos, «Estoy atascado» y sprints.
+- Nombres de 62 culturas y 8 épocas, con las costumbres de cada una, e inventados para fantasía y ciencia ficción.
+
+**Planificación y revisión**
+- Corcho, línea de tiempo narrativa y cronológica, estructuras clásicas, fichas del mundo con detección de apariciones y mapa de relaciones.
+- Estadísticas, repeticiones y muletillas, búsqueda y reemplazo, versiones con comparación y restauración.
 
 **Salida**
-- Exporta a Markdown, Word (`.docx`), EPUB y PDF (vía impresión).
+- Word (`.docx`), EPUB, PDF, Markdown, LaTeX, HTML y Fountain; importación desde Word y Markdown.
 
 **Extensible**
-- Sistema de [plugins](#plugins): temas, estructuras y plantillas de escena.
+- [Plugins](#plugins) de temas, estructuras y herramientas, instalables sin actualizar la app.
+
+## Web y tutoriales
+
+La web de descarga y los tutoriales están en [`docs/`](docs/) (HTML estático, sin compilar) y se publican con **GitHub Pages**: en *Settings → Pages*, elige *Deploy from a branch*, rama `master`, carpeta `/docs`. Quedará en `https://iamjuaness.github.io/Shakes/`. El botón de descarga lee la última release de GitHub, así que no hay que tocar la web en cada versión.
+
+Para verla en local: `python -m http.server 4321 -d docs` y abre <http://localhost:4321>.
 
 ## Instalación (Windows)
 
-1. Ve a [**Releases**](https://github.com/iamjuaness/Shakes/releases/latest) y descarga `Shakes_<versión>_x64-setup.exe`.
+1. Ve a la [**web de Shakes**](https://iamjuaness.github.io/Shakes/) o a [**Releases**](https://github.com/iamjuaness/Shakes/releases/latest) y descarga `Shakes_<versión>_x64-setup.exe`.
 2. Ejecútalo y sigue el asistente.
 
 > El instalador aún no está firmado: Windows SmartScreen puede mostrar «editor desconocido». Pulsa *Más información → Ejecutar de todas formas*.
@@ -80,7 +86,7 @@ Hay un proyecto de ejemplo en [`ejemplos/La_ultima_farola.shks`](ejemplos/La_ult
 
 ## Plugins
 
-Un plugin es un archivo JSON. Los de temas y estructuras **no ejecutan código**: solo aportan datos validados. Los de herramientas (`"tool": "id"`) activan código que ya viene incluido en la app (carpeta [`plugins/herramientas`](plugins/herramientas)); un JSON nunca trae código propio. Todo se instala desde la pestaña **Plugins**, que también lista los de la carpeta [`plugins/`](plugins/README.md).
+Un plugin es un archivo JSON. Los de temas y estructuras **no ejecutan código**: solo aportan datos validados. Los de herramientas (`"tool": "id"` y `"main": "main.js"`) traen su código compilado con `npm run plugins` desde [`plugins/herramientas`](plugins/herramientas); Shakes pide confirmación antes de instalarlos y los incluidos en la app se actualizan solos. Todo se instala desde **Más ▾ → Plugins**, que también lista los de la carpeta [`plugins/`](plugins/README.md).
 
 ```json
 {

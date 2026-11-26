@@ -92,6 +92,7 @@ progress::-moz-progress-bar { background: var(--accent); }
 .editor-row { flex: 1; display: flex; min-height: 0; position: relative; }
 .editor-row .editor { flex: 1; min-width: 0; }
 .ficha-ref { background: var(--accent-soft); color: var(--accent); border-bottom: 1px solid var(--accent); border-radius: 3px; cursor: pointer; }
+.fa-toast { position: absolute; right: 16px; bottom: 16px; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); font-size: 13px; }
 .fa-suggest { position: fixed; z-index: 30; list-style: none; margin: 0; padding: 4px; min-width: 180px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .fa-suggest li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 8px; border-radius: 5px; cursor: pointer; }
 .fa-suggest li.on { background: var(--accent-soft); color: var(--accent); }
@@ -164,6 +165,9 @@ progress::-moz-progress-bar { background: var(--accent); }
 .app.focus .toolbar, .app.focus .statusbar, .app.focus .format { opacity: 0.12; transition: opacity 0.2s; }
 .app.focus .toolbar:hover, .app.focus .statusbar:hover, .app.focus .format:hover { opacity: 1; }
 .title { font-weight: 650; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 80px; max-width: 100%; }
+input.title { flex: 1; border: 1px solid transparent; background: transparent; color: inherit; padding: 2px 6px; margin-left: -6px; }
+input.title:hover { border-color: var(--line); }
+.statusbar select.langsel { font-size: 12px; padding: 1px 4px; max-width: 170px; }
 .date { width: 160px; font-size: 12.5px; padding: 3px 8px; }
 .group { display: flex; white-space: nowrap; }
 .group button, .menu summary { white-space: nowrap; }
@@ -201,17 +205,25 @@ progress::-moz-progress-bar { background: var(--accent); }
 
 .editor { flex: 1; overflow: auto; padding: 56px 24px 96px; }
 .editor .ProseMirror {
-  max-width: 700px;
+  max-width: var(--editor-width, 700px);
   margin: 0 auto;
   min-height: 100%;
   outline: none;
   font-family: var(--font, Georgia, "Iowan Old Style", "Palatino Linotype", serif);
-  font-size: 19px;
+  font-size: var(--editor-size, 19px);
   line-height: 1.75;
 }
 .editor .ProseMirror p { margin: 0 0 0.9em; }
 .editor .ProseMirror h1, .editor .ProseMirror h2 { line-height: 1.25; margin: 1.4em 0 0.5em; }
 .editor .ProseMirror blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--accent); color: var(--muted); }
+/* Poesía: versos con <br>, estrofas como párrafos; sin sangría. Diario y cartas: igual que prosa. */
+.fmt-poetry .ProseMirror p { margin: 0 0 1.4em; }
+/* Cambio de escena dentro de un capítulo: se ve (y se exporta) como «* * *». */
+.editor .ProseMirror hr { border: 0; margin: 1.6em 0; text-align: center; color: var(--muted); }
+.editor .ProseMirror hr::after { content: "* * *"; letter-spacing: 0.4em; }
+.editor .ProseMirror hr.ProseMirror-selectednode { outline: 2px solid var(--accent-soft); }
+/* Escribir sin revisar: los subrayados siguen calculándose pero no se ven (callar al crítico interno mientras se escribe). */
+.app.quiet .editor :is(.ortografia, .repe, .muleti, [class*="lint-"]) { text-decoration: none; background: none; }
 .empty { color: var(--muted); text-align: center; margin: 0; padding: 30vh 16px 0; line-height: 1.6; }
 
 /* ---------- Paneles (línea, estilo, versiones) ---------- */

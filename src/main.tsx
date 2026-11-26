@@ -4,9 +4,11 @@ import Root from "./Root";
 import { idbGet } from "./store";
 import { normalize } from "./tree";
 import { loadSettings } from "./settings";
+import { enTauri, instalarArchivosNativos } from "./tauriFs";
 
 // Carga el proyecto (IndexedDB; migra el localStorage del formato anterior) y el handle del archivo antes de pintar.
 async function boot() {
+  if (enTauri()) instalarArchivosNativos(); // escritorio: diálogos y archivos nativos
   await loadSettings(); // idioma y tema antes del primer pintado
   let project: ReturnType<typeof normalize> | null = null; // sin proyecto guardado: pantalla de inicio
   try {

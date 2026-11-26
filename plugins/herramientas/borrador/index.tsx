@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addChild, find, update, type Node } from "../../../src/tree";
+import { addChild, books, esObra, find, update, type Node } from "../../../src/tree";
 import type { ToolHost, ToolPlugin } from "../types";
 
 interface Beat { id: string; name: string; text: string }
@@ -15,21 +15,16 @@ const PLANTILLAS: Record<string, string[]> = {
 const PREGUNTAS = ["¿Qué quiere el protagonista y qué se lo impide?", "¿Qué pasaría si el protagonista fallara por completo?", "¿Qué secreto cambia todo si sale a la luz?", "¿Quién se opone y por qué tiene razón desde su punto de vista?", "¿Qué decisión irreversible toma el protagonista?", "¿Qué pierde antes de ganar?"];
 const id = () => crypto.randomUUID();
 
-// Añade `e` como escena al último capítulo del ámbito (creando parte y capítulo si faltan). null si no cabe.
+// Añade `e` al final de la obra del ámbito: un capítulo en un libro (dentro de su última parte, si acaba en una)
+// o una escena en un guion (dentro de su último acto). null si no cabe.
 function agregarEscena(root: Node, scopeId: string, e: Esc): Node | null {
-  const cap = (n: Node): Node[] => (n.kind === "chapter" ? [n] : n.children.flatMap(cap));
-  let r = root;
-  let scope = find(r, scopeId);
-  if (!scope) return null;
-  let padre = scope.kind === "blank" ? scope : cap(scope).pop();
-  if (!padre) {
-    let parte = scope.children.filter((c) => c.kind === "part").pop();
-    if (!parte) { const [r2, p] = addChild(r, scope.id, "part"); if (!p) return null; r = r2; parte = p; }
-    const [r3, c] = addChild(r, parte.id, "chapter");
-    if (!c) return null;
-    r = r3; padre = c;
-  }
-  const [r4, esc] = addChild(r, padre.id, "scene");
+  const scope = find(root, scopeId);
+  const obra = scope && (esObra(scope.kind) || scope.kind === "blank" ? scope : books(scope).pop());
+  if (!obra) return null;
+  const tipo = obra.kind === "script" ? "scene" : "chapter";
+  const ult = obra.children[obra.children.length - 1];
+  const padre = ult && (ult.kind === "part" || ult.kind === "act") ? ult : obra;
+  const [r4, esc] = addChild(root, padre.id, tipo);
   if (!esc) return null;
   const resumen = [e.goal && `Objetivo: ${e.goal}`, e.conflict && `Conflicto: ${e.conflict}`, e.outcome && `Desenlace: ${e.outcome}`].filter(Boolean).join("\n");
   return update(r4, esc.id, (n) => ({ ...n, title: e.title || n.title, summary: resumen }));
@@ -49,10 +44,10 @@ function Panel({ host }: { host: ToolHost }) {
   const mover = <T,>(l: T[], i: number, dir: -1 | 1) => { const j = i + dir; if (j < 0 || j >= l.length) return l; const c = [...l]; [c[i], c[j]] = [c[j], c[i]]; return c; };
   const aEscena = (e: Esc) => {
     const r = agregarEscena(host.project.book, host.scope.id, e);
-    if (!r) return host.notify("No se pudo crear la escena aquí");
+    if (!r) return host.notify("No se pudo añadir al manuscrito aquí");
     host.setProject((p) => ({ ...p, book: r }));
     setEsc(e, { done: true });
-    host.notify(`Escena «${e.title || "sin título"}» creada`);
+    host.notify(`«${e.title || "sin título"}» añadida al manuscrito`);
   };
   const pendientes = d.escenas.filter((e) => !e.done).length;
 
@@ -109,7 +104,7 @@ function Panel({ host }: { host: ToolHost }) {
               {beat && <span className="chip">{beat.name}</span>}
               <button aria-label="Subir" onClick={() => save({ escenas: mover(d.escenas, i, -1) })}>↑</button>
               <button aria-label="Bajar" onClick={() => save({ escenas: mover(d.escenas, i, 1) })}>↓</button>
-              <button disabled={e.done} title="Crea la escena real en el manuscrito con esta sinopsis" onClick={() => aEscena(e)}>{e.done ? "Creada" : "Al manuscrito"}</button>
+              <button disabled={e.done} title="Crea el capítulo (o la escena, en un guion) en el manuscrito con esta sinopsis" onClick={() => aEscena(e)}>{e.done ? "Creada" : "Al manuscrito"}</button>
               <button aria-label="Quitar escena" onClick={() => save({ escenas: d.escenas.filter((x) => x.id !== e.id) })}>×</button>
             </div>
             <Area v={e.goal} set={(goal) => setEsc(e, { goal })} ph="Objetivo: ¿qué quiere el personaje en esta escena?" />

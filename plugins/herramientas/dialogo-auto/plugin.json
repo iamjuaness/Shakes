@@ -2,7 +2,7 @@
   "shakes": 1,
   "id": "dialogo-auto",
   "name": "Diálogo y comillas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Convierte \" en comillas « » y -- en raya (—) mientras escribes.",
   "tool": "dialogo-auto",
   "main": "main.js"

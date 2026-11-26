@@ -2,7 +2,7 @@
   "shakes": 1,
   "id": "inconsistencias",
   "name": "Inconsistencias",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Detecta contradicciones entre la ficha (ojos, pelo, edad) y las escenas.",
   "tool": "inconsistencias",
   "main": "main.js"

@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { TEMPLATES, applyTemplate, dialogueShare, diffVersions, logWords, mentions, replaceAll, search, shift, writtenOn, analyze, chronological, plainText, restore, scenes, snapshot, addChild, countWords, find, move, newProject, normalize, remove, sampleBook, toMarkdown, totalWords, update } from "./tree.ts";
 
 const b = sampleBook();
-const scene = b.children[0].children[0].children[0];
-assert.equal(scene.kind, "scene");
+const scene = b.children[0]; // libro nuevo: un capítulo con el texto
+assert.equal(scene.kind, "chapter");
+assert.equal(scene.content, "");
 
 const [b2, none] = addChild(b, scene.id);
-assert.equal(none, null, "una escena no tiene hijos");
+assert.equal(none, null, "un capítulo no tiene hijos (las escenas son de los guiones)");
 assert.equal(b2, b);
 
 const b3 = update(b, scene.id, (n) => ({ ...n, content: "<p>Hola mundo</p><p>otra</p>" }));
@@ -16,13 +17,15 @@ assert.equal(totalWords(b), 0, "el original no muta");
 assert.equal(countWords("<p></p>"), 0);
 
 assert.equal(find(remove(b3, scene.id), scene.id), undefined);
-// mover: escena a otro capítulo, y rechazo de mover a un descendiente
-const [b4, ch2] = addChild(b, b.children[0].id);
-const m = move(b4, scene.id, ch2!.id);
-assert.equal(find(m, ch2!.id)!.children[0].id, scene.id);
-assert.equal(m.children[0].children[0].children.length, 0, "salió del capítulo original");
-assert.equal(move(b4, b4.children[0].id, scene.id), b4, "no entra en su descendiente");
-assert.equal(move(b4, scene.id, b4.id), b4, "tipo incompatible");
+// mover: capítulo a una parte, y rechazo de mover a un descendiente
+const [b4p, part] = addChild(b, b.id, "part");
+const [b4, ch2] = addChild(b4p, part!.id);
+assert.equal(ch2!.kind, "chapter");
+const m = move(b4, scene.id, part!.id);
+assert.equal(find(m, part!.id)!.children[1].id, scene.id, "el capítulo entra en la parte");
+assert.equal(m.children.length, 1, "salió del libro");
+assert.equal(move(m, part!.id, scene.id), m, "no entra en su descendiente");
+assert.equal(move(b4, part!.id, scene.id), b4, "tipo incompatible");
 
 assert.equal(toMarkdown(update(b, scene.id, (n) => ({ ...n, content: "<p>Hola <strong>mundo</strong></p>" }))).includes("Hola **mundo**"), true);
 assert.equal(normalize(b).book, b, "formato v0");
@@ -35,11 +38,10 @@ assert.equal(totalWords(back.book), 3, "restaura el texto");
 assert.equal(back.versions.length, 2, "guarda el estado previo");
 
 // cronología: sin fecha al final, narrativo estable
-const [b5, c3] = addChild(b4, b4.children[0].id);
-const [b6, s3] = addChild(b5, c3!.id);
+const [b6, s3] = addChild(b4, b4.id);
 const b7 = update(update(b6, s3!.id, (n) => ({ ...n, date: "2020-01-01" })), scene.id, (n) => ({ ...n, date: "2021-01-01" }));
 const order = chronological(scenes(b7)).map((x) => x.scene.id);
-assert.deepEqual(order, [s3!.id, scene.id]);
+assert.deepEqual(order.slice(0, 2), [s3!.id, scene.id]);
 
 // estilo
 const st = analyze("Caminaba lentamente. Caminaba despacio y con calma por el camino largo!");
@@ -67,12 +69,13 @@ assert.equal(mentions(sb, "Ele").length, 0);
 // plantillas
 const tb = applyTemplate(b, TEMPLATES[0]);
 assert.equal(tb.children.length, b.children.length + 3);
-assert.equal(scenes(tb).length, 1 + 8);
+assert.equal(scenes(tb).length, 1 + 8, "cada capítulo de la plantilla es una unidad de texto");
+assert.equal(scenes(tb)[1].scene.kind, "chapter");
 
 // reordenar con teclado
-const [b8, ch9] = addChild(b, b.children[0].id);
+const [b8, ch9] = addChild(b, b.id);
 const sh = shift(b8, ch9!.id, -1);
-assert.equal(sh.children[0].children[0].id, ch9!.id);
+assert.equal(sh.children[0].id, ch9!.id);
 assert.deepEqual(shift(sh, ch9!.id, -1), sh, "en el borde no cambia");
 
 // diario
@@ -120,14 +123,14 @@ console.log("tree ok");
   // rutas y localización
   const sc = t.firstScene(s2)!;
   assert.equal(t.bookOf(s2, sc.id)!.id, libro.id);
-  assert.equal(scenes(s2)[0].path, "Mi historia › Parte 1 › Capítulo 1".replace("Mi historia › ", "Mi historia › "), "la ruta incluye el libro");
+  assert.equal(scenes(s2)[0].path, "Mi historia", "la ruta incluye el libro");
   assert.equal(normalize({ book: saga }).book.kind, "saga", "se guarda y abre una saga");
   const p = t.newProject("saga", "Mi trilogía");
   assert.equal(p.book.title, "Mi trilogía");
   assert.equal(p.book.children[0].kind, "book");
   // exportación: encabezados relativos a la raíz
-  assert.ok(toMarkdown(saga).startsWith("# Trilogía\n\n## Mi historia\n\n### Parte 1"), "markdown de saga");
-  assert.ok(toMarkdown(libro).startsWith("# Mi historia\n\n## Parte 1"), "un libro suelto no cambia");
+  assert.ok(toMarkdown(saga).startsWith("# Trilogía\n\n## Mi historia\n\n#### Capítulo 1"), "markdown de saga");
+  assert.ok(toMarkdown(libro).startsWith("# Mi historia\n\n### Capítulo 1"), "un libro suelto no cambia");
   assert.ok(e.xhtmlBody(saga).startsWith("<h1>Trilogía</h1><h2>Mi historia</h2>"));
   console.log("saga ok");
 }
@@ -137,7 +140,7 @@ console.log("tree ok");
   assert.equal(b.book.kind, "blank");
   assert.equal(b.book.children.length, 0, "en blanco: sin hijos");
   const [r1, s] = addChild(b.book, b.book.id);
-  assert.equal(s?.kind, "scene", "en blanco: «+» crea escena directa");
+  assert.equal(s?.kind, "chapter", "en blanco: «+» crea un capítulo");
   const [, lib] = addChild(r1, b.book.id, "book");
   assert.equal(lib?.kind, "book", "en blanco: admite libro");
   assert.equal(normalize(JSON.parse(JSON.stringify(b))).book.kind, "blank", "normalize conserva blank");
@@ -154,4 +157,46 @@ console.log("tree ok");
   assert.equal(p.versions[0].cards[0].type, "character");
   assert.equal(normalize(p).cards[0].type, "place", "idempotente");
   console.log("cards ok");
+}
+
+// Proyectos antiguos: las escenas de cada capítulo se funden en él (separadas con <hr>); los guiones conservan sus escenas.
+{
+  const sc = (content: string, extra = {}) => ({ id: crypto.randomUUID(), kind: "scene", title: "E", content, children: [], ...extra });
+  const old = { book: { id: "b", kind: "book", title: "L", children: [{ id: "p", kind: "part", title: "P", children: [
+    { id: "c", kind: "chapter", title: "C", children: [sc("<p>uno</p>", { status: "final", goal: 100 }), sc("<p></p>"), sc("<p>dos</p>", { status: "draft", goal: 50, summary: "s2" })] }] }] } };
+  const p = normalize(old);
+  const c = find(p.book, "c")!;
+  assert.equal(c.children.length, 0);
+  assert.equal(c.content, "<p>uno</p><hr><p>dos</p>", "escenas vacías fuera, separador entre las demás");
+  assert.equal(c.status, "draft", "el estado menos avanzado");
+  assert.equal(c.goal, 150);
+  assert.equal(c.summary, "s2");
+  assert.equal(p.versions[0].book, old.book, "copia previa a la migración");
+  assert.equal(normalize(p).versions.length, p.versions.length, "idempotente: no vuelve a copiar");
+  const guion = newProject("script", "G");
+  assert.equal(guion.book.kind, "script");
+  assert.equal(guion.book.children[0].kind, "scene", "un guion se escribe por escenas");
+  assert.equal(normalize(JSON.parse(JSON.stringify(guion))).book.children[0].kind, "scene", "las escenas del guion no se funden");
+  assert.equal(addChild(guion.book, guion.book.id, "act")[1]!.kind, "act");
+  assert.ok(toMarkdown(update(b, scene.id, (n) => ({ ...n, content: "<p>a</p><hr><p>b</p>" }))).includes("a\n\n* * *\n\nb"), "separador en Markdown");
+  console.log("capítulos ok");
+}
+
+// Tipos de obra: nombres de las piezas y estructura inicial
+{
+  const p = newProject("book", "Versos", undefined, "es", "poetry");
+  assert.equal(p.book.meta?.formato, "poetry");
+  assert.match(p.book.children[0].title, /^Poema 1$/);
+  assert.match(addChild(p.book, p.book.id)[1]!.title, /^Poema 2$/, "«+» crea poemas");
+  assert.match(addChild(p.book, p.book.id, "part")[1]!.title, /^Sección/);
+  const d = newProject("book", "Diario", undefined, "es", "diary");
+  assert.ok(/\d{4}/.test(d.book.children[0].title), "una entrada de diario lleva la fecha");
+  const c = newProject("book", "Viñetas", undefined, "es", "comic");
+  assert.equal(c.book.kind, "script", "el cómic es de base guion");
+  assert.match(c.book.children[0].title, /^Página 1$/);
+  const tea = newProject("script", "Obra", undefined, "es", "theatre");
+  assert.equal(addChild(tea.book, tea.book.id, "act")[1]!.title, "Acto 2".replace("2", String(tea.book.children.length + 1)));
+  const n = newProject("book", "Novela");
+  assert.equal(n.book.meta?.formato, undefined, "una novela no guarda formato (el de siempre)");
+  console.log("formatos ok");
 }

@@ -4,6 +4,41 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). C
 
 ## [Sin publicar]
 
+## [0.8.0] - 2026-11-26
+### Añadido
+- **Web de Shakes** (`docs/`, GitHub Pages): descarga de la última versión directamente desde las releases y tutoriales de uso (primer proyecto, escribir cómodo, corrector, fichas, Taller creativo, guiones, exportar, atajos y problemas frecuentes).
+- **Para cualquier tipo de escrito**: al crear un proyecto se elige novela, cuento, poemario (Intro = verso, Intro dos veces = estrofa), ensayo / no ficción, artículos / blog, diario (cada entrada con la fecha), novela epistolar, guion de cine, teatro, cómic / novela gráfica o radio / pódcast. Cada tipo llama a sus piezas por su nombre (poema, entrada, carta, página…) y se puede cambiar en los datos de la obra.
+- **Guion para teatro, cómic y radio**: elementos propios (acotación y aparte; viñeta, descripción, cartela y onomatopeya; voz, sonido y música), con su formato en el editor y en el PDF.
+- **Taller creativo** (se instala solo): personajes completos creados de acuerdo a tu historia —nombre de la cultura y época elegidas, edad según su papel, oficio de ese mundo, virtudes, defecto, herida, mentira, arco, deseo, miedo, secreto, voz, rasgo físico y su relación con tu protagonista—, más lugares, objetos, conflictos con tus personajes, giros de trama, «¿y si…?», títulos, «Estoy atascado» con ejercicios y sprints de escritura. Lo generado sale en el idioma del libro.
+- **Nombres de 62 culturas y 8 épocas** (Antigüedad, Edad Media, siglos XVI–XVIII, XIX, XX, actualidad, fantasía y ciencia ficción), por género y con las costumbres de cada una: dos apellidos, patronímicos nórdicos, apellido delante en Asia oriental y Hungría, apellidos eslavos en femenino, «ibn/bint», «hijo de»… Incluye pueblos originarios de América (mexica, maya, inca, mapuche, guaraní) y nombres inventados para fantasía y ciencia ficción.
+- **Escritorio**: abrir, guardar, elegir carpeta y exportar usan los diálogos y archivos nativos del sistema (sin permisos «de sitio web» ni diálogos minimizados); las carpetas elegidas se recuerdan entre sesiones. Exportar pregunta dónde guardar.
+- PDF del guion generado por Shakes, sin pasar por el diálogo de impresión: sin fecha ni URL del navegador; Courier 12, negrita y cursiva, diálogos partidos con (MÁS) / (CONT.).
+- **Corrector ortográfico en el idioma de cada libro**, no en el de la interfaz: se elige al crear el proyecto o en la barra de estado. Unos 90 idiomas (Hunspell); español e inglés vienen incluidos y los demás se descargan una vez y quedan guardados. Se puede apagar en Ajustes. Sustituye a los plugins `ortografia-es`/`ortografia-en`, que se quitan solos.
+- **Plugin Guion** (se instala solo al abrir un guion): proyecto nuevo «Guion» con escenas (y actos opcionales); elementos de guion (encabezado, acción, personaje, acotación, diálogo, transición) con Tab/Mayús+Tab e Intro; «INT.»/«EXT.» y «CORTE A:» se reconocen solos; la escena toma el nombre de su encabezado; desglose de escenas y reparto con minutos aproximados; exportación a Fountain y a PDF con formato de industria.
+- Guion con el formato profesional: Courier 12 sencillo (1 página ≈ 1 minuto), márgenes de 1" (izquierdo 1,5"), papel Carta o A4 (se propone según el idioma), sangrías de personaje (9,65 cm), diálogo (6,6 cm, 35 caracteres de ancho) y acotación (8,26 cm), transiciones a la derecha, sin justificar, encabezados en mayúsculas sin negrita, negrita permitida en la acción, portada sin número y páginas numeradas arriba a la derecha («2.»). Word y EPUB también salen con formato de guion.
+- Guion: autocompletar personajes (los que ya hablan y las fichas): «AN» + Intro = ANA. Aviso de encabezados incompletos (INT./EXT. LUGAR - DÍA/NOCHE) en el editor y en el desglose. Reconoce «fundido a negro», «corte a», «dissolve to»…
+- Botón «⁂» de cambio de escena dentro de un capítulo (se exporta como «* * *»).
+- «Sin subrayados»: escribir sin ver correcciones de ortografía, estilo ni repeticiones, y revisar después.
+- Ajustes de escritura: tamaño del texto y ancho de la columna.
+- El título del capítulo o escena se cambia escribiendo directamente en la barra superior.
+### Cambiado
+- **Los libros se escriben por capítulos** (agrupados en partes si se quiere); las escenas quedan para los guiones. Los proyectos antiguos se convierten al abrirlos: las escenas de cada capítulo se unen en él, separadas con «* * *», y antes se guarda una copia en Versiones.
+- Al abrir un proyecto se vuelve a lo último que se estaba escribiendo, no al primer capítulo.
+- Los plugins incluidos en la app se actualizan solos cuando la app trae una versión más nueva.
+- El corrector trabaja en un hilo aparte (Web Worker): cargar un diccionario o pedir sugerencias ya no congela la app.
+- Linter de estilo, repeticiones y diálogo automático solo se activan si el libro está en español; las estadísticas ocultan adverbios en -mente y legibilidad INFLESZ en otros idiomas.
+- Los subrayados (ortografía, estilo, repeticiones) solo se recalculan en el párrafo que cambia: escribir en capítulos largos ya no se ralentiza.
+### Arreglado
+- Pérdida de datos: «Nuevo» y luego «Volver al proyecto» recuperaba el proyecto tal como estaba al abrirlo y el autoguardado pisaba el archivo con esa copia vieja.
+- «Cerrar proyecto» sin archivo (solo en el navegador) lo borraba sin avisar: ahora ofrece Guardar como….
+- Abrir otro archivo perdía lo escrito en el último medio segundo.
+- Instalar un plugin con extensiones de editor no tenía efecto hasta cambiar de capítulo.
+- El corrector del navegador subrayaba a la vez que el de Shakes (y en el idioma del sistema).
+- Fichas automáticas abría una ventana a mitad de frase que se quedaba con el Intro y creaba la ficha sin querer: ahora es un aviso discreto que no quita el teclado. Ya no propone palabras EN MAYÚSCULAS (sonidos, siglas, encabezados de guion) como nombres.
+- PDF del guion: la portada desbordaba y dejaba una página en blanco.
+- Las exportaciones avisan de dónde se guardó el archivo (antes caían en Descargas sin decir nada); el PDF recuerda desmarcar «Encabezados y pies de página» del diálogo de impresión.
+- En un guion, «Exportar Fountain» de Exportar extra remite a «Exportar guion (Fountain)…», que sí conserva los elementos de guion.
+
 ## [0.7.0] - 2026-11-21
 ### Añadido
 - **Plugins con código instalables sin actualizar la app**, como las extensiones de VS Code: un `plugin.json` con `"main"` apunta a un `.js` que Shakes descarga al instalar y guarda con el plugin. Pide confirmación porque ejecuta código. Todas las herramientas pasan a este sistema (menos Ortografía, que lleva diccionarios) y las instalaciones existentes se migran solas. Nuevo plugin: **Borrador de historia** (premisa, lluvia de ideas, beats por plantilla y tablero de escenas que pasan al manuscrito).

@@ -2,7 +2,7 @@
   "shakes": 1,
   "id": "resumen-escenas",
   "name": "Resumen de escenas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Rellena las sinopsis vacías del corcho con las primeras frases de cada escena.",
   "tool": "resumen-escenas",
   "main": "main.js"

@@ -1,31 +1,34 @@
 // Exportadores. Los builders son puros (devuelven {ruta: contenido}); `zip` empaqueta con fflate cargado bajo demanda.
-import type { Kind, Node } from "./tree.ts";
-import { lineaMeta } from "./tree.ts";
+import type { Node } from "./tree.ts";
+import { conTexto, level as LV, lineaMeta } from "./tree.ts";
 
 interface Run { t: string; b: boolean; i: boolean }
-interface Block { tag: string; runs: Run[] }
+interface Block { tag: string; runs: Run[]; sp?: string } // sp: elemento de guion (data-sp) del párrafo
 
 const dec = (s: string) => s.replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // Niveles de encabezado relativos a la raíz exportada: un libro empieza en 1; una saga o un universo, en 1 y sus libros en 2.
-const LV: Record<Kind, number> = { blank: 0, universe: 1, saga: 2, book: 3, part: 4, chapter: 5, scene: 6 };
 const lv = (n: Node, base: number) => Math.min(6, LV[n.kind] - base);
 
-// HTML de TipTap -> bloques con tramos negrita/cursiva.
+// HTML de TipTap -> bloques con tramos negrita/cursiva. <hr> (separador de escena dentro de un capítulo) es un bloque vacío "hr".
 export function parseBlocks(html = ""): Block[] {
-  return [...html.matchAll(/<(p|h[1-6]|li|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/gi)].map((m) => {
+  return [...html.matchAll(/<(p|h[1-6]|li|blockquote)\b([^>]*)>([\s\S]*?)<\/\1>|<hr\b[^>]*>/gi)].map((m) => {
+    if (!m[1]) return { tag: "hr", runs: [] };
+    const sp = m[2].match(/data-sp="([a-z]+)"/)?.[1];
+    const mayus = sp === "heading" || sp === "character" || sp === "transition";
     let b = false, i = false;
     const runs: Run[] = [];
-    for (const tok of m[2].split(/(<[^>]+>)/)) {
+    for (const tok of m[3].split(/(<[^>]+>)/)) {
       const tag = tok.match(/^<(\/?)(\w+)/);
       if (tag) {
         const on = !tag[1], n = tag[2].toLowerCase();
         if (n === "strong" || n === "b") b = on;
         else if (n === "em" || n === "i") i = on;
         else if (n === "br") runs.push({ t: "\n", b, i });
-      } else if (tok) runs.push({ t: dec(tok), b, i });
+      } else if (tok) runs.push({ t: mayus ? dec(tok).toUpperCase() : dec(tok), b, i });
     }
-    return { tag: m[1].toLowerCase(), runs };
+    if (sp === "paren" && runs[0] && !runs[0].t.startsWith("(")) { runs.unshift({ t: "(", b: false, i: false }); runs.push({ t: ")", b: false, i: false }); }
+    return { tag: m[1].toLowerCase(), runs, ...(sp ? { sp } : {}) };
   });
 }
 
@@ -52,7 +55,22 @@ const docxCover = (c: Cover | null) => {
   return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="1" name="Portada"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="portada.${c.ext}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdCover"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p><w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
 };
 
-const head = (tag: string, escena: number) => Math.min(6, +tag[1] + escena); // h1 dentro de una escena (nivel 4) -> encabezado 5
+const head = (tag: string, nivel: number) => Math.min(6, +tag[1] + nivel); // h1 dentro de un capítulo de nivel 3 -> encabezado 4
+const SEP = "* * *";
+
+// ---------- Guion ----------
+// Formato de industria (Courier 12, sencillo; izquierda 1,5", resto 1"): sangrías desde el margen izquierdo, en twips
+// (1" = 1440). Personaje a 3,8" del borde, diálogo a 2,6" y 3,5" de ancho, acotación a 3,25", transición a la derecha.
+const SP_DOCX: Record<string, string> = {
+  heading: '<w:keepNext/><w:spacing w:before="240" w:after="240"/>',
+  action: '<w:spacing w:after="240"/>',
+  character: '<w:keepNext/><w:spacing w:before="240" w:after="0"/><w:ind w:left="3312"/>',
+  paren: '<w:keepNext/><w:spacing w:after="0"/><w:ind w:left="2520" w:right="3240"/>',
+  dialogue: '<w:spacing w:after="240"/><w:ind w:left="1584" w:right="2016"/>',
+  transition: '<w:spacing w:after="240"/><w:jc w:val="right"/>',
+};
+export type Papel = "A4" | "letter";
+const SP_CSS = ".sp-heading,.sp-character,.sp-transition{text-transform:uppercase}.sp-character{margin:1em 0 0 2.3in;text-indent:0}.sp-paren{margin:0 0 0 1.75in;width:2in;text-indent:0}.sp-dialogue{margin:0 0 1em 1.1in;width:3.5in;text-indent:0}.sp-transition{text-align:right}.guion p{text-align:left;text-indent:0;margin:0 0 1em}.guion{font-family:'Courier Prime','Courier New',Courier,monospace}";
 
 // ---------- DOCX ----------
 const runXml = (r: Run) =>
@@ -60,12 +78,15 @@ const runXml = (r: Run) =>
 const para = (style: string | null, runs: Run[], extra = "") =>
   `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ""}${extra}</w:pPr>${runs.map(runXml).join("")}</w:p>`;
 
-// El nombre de una escena no se exporta: solo se separa de la anterior con «* * *».
+// El nombre de una escena (guion o proyecto antiguo) no se exporta: solo se separa de la anterior con «* * *».
 function docxBody(n: Node, base = LV[n.kind] - 1, i = 0): string {
-  const own = n.kind !== "scene" ? para(`Heading${lv(n, base)}`, [{ t: n.title, b: false, i: false }]) : i > 0 ? para(null, [{ t: "* * *", b: false, i: false }], '<w:jc w:val="center"/>') : "";
-  const text = n.kind === "scene"
+  const sep = para(null, [{ t: SEP, b: false, i: false }], '<w:jc w:val="center"/>');
+  const own = n.kind !== "scene" ? para(`Heading${lv(n, base)}`, [{ t: n.title, b: false, i: false }]) : i > 0 ? sep : "";
+  const text = conTexto(n.kind)
     ? parseBlocks(n.content).map((b) =>
-        /^h\d$/.test(b.tag) ? para(`Heading${head(b.tag, lv(n, base))}`, b.runs)
+        b.tag === "hr" ? sep
+        : b.sp && SP_DOCX[b.sp] ? para(null, b.runs, SP_DOCX[b.sp])
+        : /^h\d$/.test(b.tag) ? para(`Heading${head(b.tag, lv(n, base))}`, b.runs)
         : b.tag === "li" ? para(null, [{ t: "• ", b: false, i: false }, ...b.runs])
         : b.tag === "blockquote" ? para(null, b.runs, '<w:ind w:left="720"/>')
         : para(null, b.runs)).join("")
@@ -77,15 +98,24 @@ const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main
 const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Georgia" w:hAnsi="Georgia"/><w:sz w:val="24"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="320" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>${[1, 2, 3, 4, 5, 6].map((l) =>
   `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:name w:val="heading ${l}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="${l < 3 ? 360 : 200}" w:after="120"/><w:outlineLvl w:val="${l - 1}"/></w:pPr><w:rPr><w:b/><w:sz w:val="${Math.max(24, 44 - l * 5)}"/></w:rPr></w:style>`).join("")}<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
 
-export function toDocxFiles(book: Node): Record<string, string | Uint8Array> {
+// Un guion sale en Courier 12 sencillo, con márgenes de guion, portada propia y número de página arriba a la derecha
+// («2.») desde la segunda página; `papel`: Carta (EE. UU.) o A4 (Europa y Latinoamérica).
+export function toDocxFiles(book: Node, papel: Papel = "letter"): Record<string, string | Uint8Array> {
   const rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
   const cover = coverOf(book);
+  const guion = book.kind === "script";
+  const estilos = guion ? styles.replace('w:ascii="Georgia" w:hAnsi="Georgia"', 'w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"').replace('w:after="160" w:line="320"', 'w:after="0" w:line="240"') : styles;
+  const portada = guion ? `<w:p><w:pPr><w:spacing w:before="4320"/><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xml(book.title.toUpperCase())}</w:t></w:r></w:p>${book.meta?.author ? `<w:p><w:pPr><w:spacing w:before="240"/><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xml(book.meta.author)}</w:t></w:r></w:p>` : ""}<w:p><w:r><w:br w:type="page"/></w:r></w:p>` : "";
+  const [pw, ph] = papel === "A4" ? [11906, 16838] : [12240, 15840];
+  const sect = guion ? `<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="${pw}" w:h="${ph}"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="2160" w:header="720" w:footer="720" w:gutter="0"/><w:titlePg/></w:sectPr>` : "";
+  const header = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr ${W}><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>2</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r><w:r><w:t>.</w:t></w:r></w:p></w:hdr>`;
   return {
-    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${cover ? `<Default Extension="${cover.ext}" ContentType="image/${cover.mime}"/>` : ""}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`,
+    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${cover ? `<Default Extension="${cover.ext}" ContentType="image/${cover.mime}"/>` : ""}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>${guion ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' : ""}</Types>`,
     "_rels/.rels": `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rel}/officeDocument" Target="word/document.xml"/></Relationships>`,
-    "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rel}/styles" Target="styles.xml"/>${cover ? `<Relationship Id="rIdCover" Type="${rel}/image" Target="media/portada.${cover.ext}"/>` : ""}</Relationships>`,
-    "word/styles.xml": styles,
-    "word/document.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W} xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${docxCover(cover)}${docxBody(book)}</w:body></w:document>`,
+    "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rel}/styles" Target="styles.xml"/>${cover ? `<Relationship Id="rIdCover" Type="${rel}/image" Target="media/portada.${cover.ext}"/>` : ""}${guion ? `<Relationship Id="rIdHdr" Type="${rel}/header" Target="header1.xml"/>` : ""}</Relationships>`,
+    "word/styles.xml": estilos,
+    "word/document.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W} xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${docxCover(cover)}${guion ? portada + book.children.map((c, j) => docxBody(c, LV[book.kind] - 1, j)).join("") : docxBody(book)}${sect}</w:body></w:document>`,
+    ...(guion ? { "word/header1.xml": header } : {}),
     ...(cover ? { [`word/media/portada.${cover.ext}`]: cover.data } : {}),
   };
 }
@@ -98,10 +128,13 @@ const inline = (runs: Run[]) =>
   }).join("");
 
 export function xhtmlBody(n: Node, base = LV[n.kind] - 1, i = 0): string {
-  const h = n.kind !== "scene" ? `<h${lv(n, base)}>${xml(n.title)}</h${lv(n, base)}>` : i > 0 ? '<p style="text-align:center;text-indent:0">* * *</p>' : "";
-  const text = n.kind === "scene"
+  const sep = `<p style="text-align:center;text-indent:0">${SEP}</p>`;
+  const h = n.kind !== "scene" ? `<h${lv(n, base)}>${xml(n.title)}</h${lv(n, base)}>` : i > 0 ? sep : "";
+  const text = conTexto(n.kind)
     ? parseBlocks(n.content).map((b) =>
-        /^h\d$/.test(b.tag) ? `<h${head(b.tag, lv(n, base))}>${inline(b.runs)}</h${head(b.tag, lv(n, base))}>`
+        b.tag === "hr" ? sep
+        : b.sp ? `<p class="sp-${b.sp}">${inline(b.runs)}</p>`
+        : /^h\d$/.test(b.tag) ? `<h${head(b.tag, lv(n, base))}>${inline(b.runs)}</h${head(b.tag, lv(n, base))}>`
         : b.tag === "li" ? `<p>• ${inline(b.runs)}</p>`
         : b.tag === "blockquote" ? `<blockquote><p>${inline(b.runs)}</p></blockquote>`
         : `<p>${inline(b.runs)}</p>`).join("")
@@ -109,8 +142,8 @@ export function xhtmlBody(n: Node, base = LV[n.kind] - 1, i = 0): string {
   return h + fichaXhtml(n) + text + n.children.map((c, j) => xhtmlBody(c, base, j)).join("");
 }
 
-const page = (title: string, body: string) =>
-  `<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es"><head><meta charset="utf-8"/><title>${xml(title)}</title></head><body>${body}</body></html>`;
+const page = (title: string, body: string, guion = false) =>
+  `<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es"><head><meta charset="utf-8"/><title>${xml(title)}</title>${guion ? `<style>${SP_CSS}</style>` : ""}</head><body${guion ? ' class="guion"' : ""}>${body}</body></html>`;
 
 // ---------- EPUB ----------
 export function toEpubFiles(book: Node): Record<string, string | Uint8Array> {
@@ -121,7 +154,8 @@ export function toEpubFiles(book: Node): Record<string, string | Uint8Array> {
     mimetype: "application/epub+zip",
     "META-INF/container.xml": `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`,
   };
-  secs.forEach((s, i) => (files[`OEBPS/s${i + 1}.xhtml`] = page(s.title, s === book ? xhtmlBody(book) : `${i === 0 ? `<h1>${xml(book.title)}</h1>` : ""}${xhtmlBody(s, LV[book.kind] - 1)}`)));
+  const guion = book.kind === "script";
+  secs.forEach((s, i) => (files[`OEBPS/s${i + 1}.xhtml`] = page(s.title, s === book ? xhtmlBody(book) : `${i === 0 ? `<h1>${xml(book.title)}</h1>` : ""}${xhtmlBody(s, LV[book.kind] - 1)}`, guion)));
   if (cover) {
     files[`OEBPS/cover.${cover.ext}`] = cover.data;
     files["OEBPS/cover.xhtml"] = page(book.title, `<div style="text-align:center"><img src="cover.${cover.ext}" alt="Portada" style="max-width:100%;max-height:100%"/></div>`);
@@ -135,7 +169,8 @@ export function toEpubFiles(book: Node): Record<string, string | Uint8Array> {
 export const printHtml = (book: Node) =>
   `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${xml(book.title)}</title><style>
 body{font:12pt/1.6 Georgia,serif;margin:0}h1{text-align:center;margin:30vh 0 0;font-size:30pt}h2{page-break-before:always;font-size:20pt}h3{margin-top:2em;font-size:15pt}h4{text-align:center;margin:1.5em 0;font-size:0}h4::before{content:"* * *";font-size:12pt;font-weight:normal}p{margin:0 0 .8em;text-align:justify;text-indent:1.2em}blockquote{margin:1em 2em}.portada{page-break-after:always;text-align:center}.portada img{max-width:100%;max-height:95vh}.ficha{text-align:center;font-style:italic}.ficha p{text-indent:0;text-align:center}
-</style></head><body>${coverOf(book) ? `<div class="portada"><img src="${coverOf(book)!.url}" alt="Portada"/></div>` : ""}${xhtmlBody(book)}</body></html>`;
+${SP_CSS}
+</style></head><body${book.kind === "script" ? ' class="guion"' : ""}>${coverOf(book) ? `<div class="portada"><img src="${coverOf(book)!.url}" alt="Portada"/></div>` : ""}${xhtmlBody(book)}</body></html>`;
 
 export async function zip(files: Record<string, string | Uint8Array>): Promise<Uint8Array> {
   const { zipSync, strToU8 } = await import("fflate");

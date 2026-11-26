@@ -27,7 +27,7 @@ Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lis
 | `dialogo-auto` | `"` → « », `--` → — | Editor |
 | `repeticiones` | Subraya repeticiones y muletillas; clic = menú de sustitutos | Editor |
 | `linter-estilo` | Adverbios, pasiva, gramática, frases largas…; clic = alternativas | Editor |
-| `ortografia-es` / `ortografia-en` | Subraya en rojo palabras mal escritas (diccionario Hunspell); clic = sugerencias o añadir al diccionario; conoce nombres y apodos de fichas. Activa solo el del idioma del texto | Editor |
+| ~~`ortografia-es` / `ortografia-en`~~ (ahora en el núcleo, en el idioma de cada libro) | Subraya en rojo palabras mal escritas (diccionario Hunspell); clic = sugerencias o añadir al diccionario; conoce nombres y apodos de fichas. Activa solo el del idioma del texto | Editor |
 | `notas-margen` | Notas sobre texto seleccionado | Editor |
 | `notas-laterales` | Panel derecho con un .md/.txt de notas previas | Editor |
 | `sesion-pomodoro` | Temporizador 25/5 y palabras de la sesión | Editor |

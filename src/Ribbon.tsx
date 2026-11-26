@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Node, STATUSES, Status, esContenedor } from "./tree";
+import { Node, STATUSES, Status, conTexto, esContenedor, etiqueta, formatoDe } from "./tree";
 import type { ToolHost, ToolPlugin } from "./pluginApi";
 import type { ExportKind } from "./exporting";
 import { t, tr } from "./i18n";
@@ -14,6 +14,7 @@ export interface RibbonProps {
   onScene: (patch: Partial<Node>) => void;
   tools: ToolPlugin[]; host: ToolHost;
   focus: boolean; onFocus: () => void; onSettings: () => void;
+  quiet: boolean; onQuiet: () => void;
 }
 
 const num = (v: string) => Math.max(0, Math.floor(Number(v))) || 0;
@@ -30,7 +31,7 @@ const item = (e: React.MouseEvent, run: () => void) => { (e.currentTarget as HTM
 
 export function Ribbon(p: RibbonProps) {
   useCloseMenus();
-  const scene = p.current?.kind === "scene" ? p.current : undefined;
+  const scene = p.current && conTexto(p.current.kind) ? p.current : undefined; // capítulo (libro) o escena (guion)
   const moreOn = p.more.find((m) => m.id === p.tab);
   return (
     <nav className="topbar">
@@ -78,7 +79,7 @@ export function Ribbon(p: RibbonProps) {
               <label className="fld">{t("scene.date.label")}<input type="date" aria-label={t("scene.date")} value={scene.date ?? ""} onChange={(e) => p.onScene({ date: e.target.value })} /></label>
               <label className="fld">{t("scene.goal.label")}<input type="number" min={0} className="goal" aria-label={t("scene.goal")} placeholder={t("scene.goal.ph")} value={scene.goal || ""} onChange={(e) => p.onScene({ goal: num(e.target.value) || undefined })} /></label>
             </div>
-            <span className="rlabel">{t("g.scene")}</span>
+            <span className="rlabel">{etiqueta(scene.kind, formatoDe(p.book, scene.id))}</span>
           </div>
         )}
         <div className="rgroup">
@@ -103,6 +104,7 @@ export function Ribbon(p: RibbonProps) {
         <div className="rgroup">
           <div className="rbtns">
             <button onClick={p.onFocus}>{p.focus ? t("view.exit") : t("view.focus")}</button>
+            <button title={t("view.quiet.title")} className={p.quiet ? "on" : ""} aria-pressed={p.quiet} onClick={p.onQuiet}>{p.quiet ? t("view.check") : t("view.quiet")}</button>
             <button title={t("settings.open")} aria-label={t("settings.open")} className={p.tab === "settings" ? "on" : ""} onClick={p.onSettings}>⚙</button>
           </div>
           <span className="rlabel">{t("g.view")}</span>

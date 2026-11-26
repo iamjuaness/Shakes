@@ -2,7 +2,7 @@
   "shakes": 1,
   "id": "fichas-auto",
   "name": "Fichas automáticas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Detecta nombres y lugares nuevos y propone crear su ficha; sugiere fichas parecidas al escribir; resalta las fichas en el texto y muestra la ficha al pulsarlas.",
   "tool": "fichas-auto",
   "main": "main.js"

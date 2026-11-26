@@ -10,8 +10,8 @@ import { ask } from "../../../src/dialog";
 import { aprender, propiosDe } from "./sinonimos";
 
 // `learn`: palabra a la que el usuario puede enseñar sinónimos desde el menú (también cuando no hay ninguno).
-// `lazy`: sustitutos que se calculan solo al abrir el menú (caro de hacer para todos los tramos). `accion`: botón extra del menú (ej. añadir al diccionario).
-export interface Span { from: number; to: number; class: string; title?: string; sug?: string[]; learn?: string; lazy?: () => string[]; accion?: { label: string; run: () => void } }
+// `lazy`: sustitutos que se calculan solo al abrir el menú (caro de hacer para todos los tramos; puede ser asíncrono). `accion`: botón extra del menú (ej. añadir al diccionario).
+export interface Span { from: number; to: number; class: string; title?: string; sug?: string[]; learn?: string; lazy?: () => string[] | Promise<string[]>; accion?: { label: string; run: () => void } }
 
 const mayus = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
@@ -44,10 +44,11 @@ const cerrar = () => { abierto?.remove(); abierto = null; document.removeEventLi
 const fuera = (e: Event) => { if (abierto && !abierto.contains(e.target as Node)) cerrar(); };
 const tecla = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
 
-function menu(view: EditorView, d: Decoration, key: PluginKey) {
+async function menu(view: EditorView, d: Decoration, key: PluginKey) {
   cerrar();
-  const { sug: fijos, msg, learn, lazy, accion } = d.spec as { sug: string[]; msg?: string; learn?: string; lazy?: () => string[]; accion?: Span["accion"] };
-  const sug = lazy ? lazy() : fijos;
+  const { sug: fijos, msg, learn, lazy, accion } = d.spec as { sug: string[]; msg?: string; learn?: string; lazy?: Span["lazy"]; accion?: Span["accion"] };
+  const sug = lazy ? await lazy() : fijos;
+  if (view.isDestroyed) return;
   const el = document.createElement("div");
   el.className = "sug-menu";
   el.setAttribute("role", "menu");
@@ -92,35 +93,62 @@ function menu(view: EditorView, d: Decoration, key: PluginKey) {
 }
 
 // `listo`: promesa (ej. carga de un diccionario) tras la cual hay que recalcular los subrayados.
-export const decorar = (name: string, spans: (text: string, previo: string) => Span[], listo?: Promise<unknown>) =>
+// `suscribir`: para fuentes asíncronas que van sabiendo más (corrector en un worker): llaman a `refrescar` y se redibuja; devuelve cómo darse de baja.
+export const decorar = (name: string, spans: (text: string, previo: string) => Span[], listo?: Promise<unknown>, suscribir?: (refrescar: () => void) => () => void) =>
   Extension.create({
     name,
     addProseMirrorPlugins() {
       const key = new PluginKey<DecorationSet>(name);
-      const build = (doc: PMNode) => {
-        const decos: Decoration[] = [];
+      // Recalcula los párrafos que tocan [from, to] y el siguiente a cada uno (depende de `previo`); el resto se reaprovecha.
+      // Sin rango, todo el documento. Así escribir en un capítulo largo no recalcula el capítulo entero en cada tecla.
+      const build = (doc: PMNode, old?: DecorationSet, from = -Infinity, to = Infinity) => {
+        const add: Decoration[] = [], quitar: Decoration[] = [];
         let previo = ""; // texto del párrafo anterior: permite detectar repeticiones entre párrafos
+        let anterior = false; // el párrafo anterior se recalculó
         doc.descendants((node, pos) => {
           if (!node.isTextblock) return true;
           const text = node.textBetween(0, node.content.size, undefined, "￼");
-          for (const s of spans(text, previo)) {
-            const act = !!(s.sug?.length || s.learn || s.lazy || s.accion);
-            decos.push(Decoration.inline(pos + 1 + s.from, pos + 1 + s.to, { class: s.class + (act ? " sug" : ""), ...(s.title ? { title: s.title } : {}) }, act ? { sug: s.sug ?? [], msg: s.title, learn: s.learn, lazy: s.lazy, accion: s.accion } : {}));
+          const end = pos + node.nodeSize;
+          const toca = (pos <= to && end >= from) || anterior;
+          anterior = pos <= to && end >= from;
+          if (toca) {
+            if (old) quitar.push(...old.find(pos + 1, end - 1));
+            for (const s of spans(text, previo)) {
+              const act = !!(s.sug?.length || s.learn || s.lazy || s.accion);
+              add.push(Decoration.inline(pos + 1 + s.from, pos + 1 + s.to, { class: s.class + (act ? " sug" : ""), ...(s.title ? { title: s.title } : {}) }, act ? { sug: s.sug ?? [], msg: s.title, learn: s.learn, lazy: s.lazy, accion: s.accion } : {}));
+            }
           }
           previo = text;
           return false;
         });
-        return DecorationSet.create(doc, decos);
+        return old ? old.remove(quitar).add(doc, add) : DecorationSet.create(doc, add);
       };
       return [new Plugin({
         key,
-        state: { init: (_, s) => build(s.doc), apply: (tr, old) => (tr.docChanged || tr.getMeta(key) ? build(tr.doc) : old) },
-        view: (v) => { listo?.then(() => { if (!v.isDestroyed) v.dispatch(v.state.tr.setMeta(key, true)); }, () => {}); return {}; },
+        state: {
+          init: (_, s) => build(s.doc),
+          apply: (tr, old) => {
+            if (tr.getMeta(key)) return build(tr.doc);
+            if (!tr.docChanged) return old;
+            let from = Infinity, to = -Infinity; // zona cambiada, en posiciones del documento nuevo
+            tr.mapping.maps.forEach((m, i) => m.forEach((_a, _b, ini, fin) => {
+              const resto = tr.mapping.slice(i + 1);
+              from = Math.min(from, resto.map(ini, -1));
+              to = Math.max(to, resto.map(fin, 1));
+            }));
+            return from > to ? build(tr.doc) : build(tr.doc, old.map(tr.mapping, tr.doc), from, to);
+          },
+        },
+        view: (v) => {
+          const refrescar = () => { if (!v.isDestroyed) v.dispatch(v.state.tr.setMeta(key, true)); };
+          listo?.then(refrescar, () => {});
+          return { destroy: suscribir?.(refrescar) };
+        },
         props: {
           decorations: (s) => key.getState(s),
           handleClick(view, pos) {
             const d = key.getState(view.state)?.find(pos, pos).find((x) => (x.spec as any).sug && x.from < pos + 1 && x.to >= pos);
-            if (d) menu(view, d, key);
+            if (d) void menu(view, d, key);
             else cerrar();
             return false;
           },

@@ -42,17 +42,13 @@ function Overlay({ editor, host }: { editor: Editor; host: ToolHost }) {
           <li className="hint muted">Tab completa · Esc cierra</li>
         </ul>
       )}
+      {/* Aviso discreto, sin robar el teclado: antes era una ventana modal que se quedaba con el Intro a mitad de frase. */}
       {cand && (
-        <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-          <div className="dialog" role="dialog" aria-modal="true" onKeyDown={(e) => e.key === "Escape" && close()}>
-            <p>¿Crear una ficha para «<b>{cand.name}</b>»?</p>
-            <select aria-label="Tipo" value={type} onChange={(e) => setType(e.target.value as CardType)}>{TYPES.map((k) => <option key={k} value={k}>{host.t(`type.${k}`)}</option>)}</select>
-            <textarea aria-label="Notas" rows={4} value={cand.notes} onChange={(e) => setCand({ ...cand, notes: e.target.value })} />
-            <div className="row">
-              <button autoFocus className="on" onClick={() => { host.addCard({ id: crypto.randomUUID(), type, name: cand.name, notes: cand.notes }); close(); }}>Crear ficha</button>
-              <button onClick={close}>Ahora no</button>
-            </div>
-          </div>
+        <div className="fa-toast" role="status" onMouseDown={(e) => e.preventDefault()}>
+          <span>¿Ficha para «<b>{cand.name}</b>»?</span>
+          <select aria-label="Tipo" value={type} onMouseDown={(e) => e.stopPropagation()} onChange={(e) => setType(e.target.value as CardType)}>{TYPES.map((k) => <option key={k} value={k}>{host.t(`type.${k}`)}</option>)}</select>
+          <button className="on" onClick={() => { host.addCard({ id: crypto.randomUUID(), type, name: cand.name, notes: cand.notes }); close(); }}>Crear</button>
+          <button aria-label="Ahora no" onClick={close}>×</button>
         </div>
       )}
       {card && (

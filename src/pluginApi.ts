@@ -16,7 +16,9 @@ export interface ToolHost {
   openScene: (id: string) => void;
   notify: (msg: string) => void; // mensaje en la barra de estado
   t: (key: string, vars?: Record<string, string | number>) => string; // textos de la interfaz en el idioma activo (p. ej. «type.character»)
-  lang: "es" | "en";
+  lang: "es" | "en"; // idioma de la interfaz
+  bookLang: string; // idioma en que está escrita la obra (BCP 47: "es", "fr", "pt-PT"…)
+  current?: Node; // lo que está abierto en el editor
 }
 export interface ToolPlugin {
   id: string;
@@ -25,5 +27,5 @@ export interface ToolPlugin {
   refresh?: (editor: Editor) => void; // el host lo llama cuando cambian las fichas
   Overlay?: ComponentType<{ editor: Editor; host: ToolHost }>; // UI junto al editor (paneles, modales, listas)
   Panel?: ComponentType<{ host: ToolHost }>; // pestaña propia (con el nombre de la herramienta)
-  actions?: { label: string; run: (host: ToolHost) => void | Promise<void> }[]; // botones del menú «Herramientas» de la cinta
+  actions?: { label: string; run: (host: ToolHost) => unknown }[]; // botones del menú «Herramientas» de la cinta
 }

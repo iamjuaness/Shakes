@@ -9,9 +9,13 @@ export interface Settings {
   theme: "auto" | "light" | "dark";
   copyMinutes: number; // copia automática del proyecto; 0 = desactivada
   checkUpdates: boolean; // buscar versión nueva en GitHub al abrir
+  spell: boolean; // corrector ortográfico en el idioma de la obra
+  quiet: boolean; // escribir sin subrayados (ortografía, estilo, repeticiones): se revisa después
+  fontSize: number; // px del texto del editor
+  width: number; // ancho máximo de la columna de texto, en px
 }
 
-export const DEFAULTS: Settings = { lang: detectLang(), theme: "auto", copyMinutes: 10, checkUpdates: true };
+export const DEFAULTS: Settings = { lang: detectLang(), theme: "auto", copyMinutes: 10, checkUpdates: true, spell: true, quiet: false, fontSize: 19, width: 700 };
 
 let cur: Settings = DEFAULTS;
 const subs = new Set<() => void>();

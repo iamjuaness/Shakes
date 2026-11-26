@@ -1,41 +1,67 @@
-// Modelo del manuscrito: [universo ->] [saga ->] libro -> partes -> capítulos -> escenas.
-// La raíz del proyecto es un libro, o una saga/universo que agrupa libros (las fichas son compartidas por todos).
+// Modelo del manuscrito: [universo ->] [saga ->] libro -> [partes ->] capítulos (con el texto).
+// Un guion (plugin «Guion») es la otra obra posible: guion -> [actos ->] escenas (con el texto).
+// La raíz del proyecto es una obra, o una saga/universo que agrupa obras (las fichas son compartidas por todas).
 // "blank": raíz sin tipo (proyecto en blanco o raíz borrada): admite cualquier nivel como hijo directo.
 import { getLang, t } from "./i18n.ts";
-export type Kind = "blank" | "universe" | "saga" | "book" | "part" | "chapter" | "scene";
+export type Kind = "blank" | "universe" | "saga" | "book" | "script" | "part" | "act" | "chapter" | "scene";
 
-// Datos editoriales de un libro (o saga/universo): salen en la portada de las exportaciones.
-export interface Meta { author?: string; year?: string; blurb?: string; cover?: string; cw?: number; ch?: number } // cover = data URL de la imagen (cw×ch px)
+// Tipo de obra: decide cómo se llaman sus piezas (capítulo, poema, entrada, página…) y cómo se edita.
+// Las de base "book" se escriben en prosa o verso; las de base "script", por elementos (plugin Guion).
+export type Formato = "novel" | "short" | "poetry" | "essay" | "article" | "diary" | "letters" | "film" | "theatre" | "comic" | "audio";
+export const FORMATOS: Record<Formato, { base: "book" | "script"; u: [string, string]; g: [string, string] }> = {
+  novel: { base: "book", u: ["Capítulo", "Chapter"], g: ["Parte", "Part"] },
+  short: { base: "book", u: ["Sección", "Section"], g: ["Parte", "Part"] },
+  poetry: { base: "book", u: ["Poema", "Poem"], g: ["Sección", "Section"] },
+  essay: { base: "book", u: ["Capítulo", "Chapter"], g: ["Parte", "Part"] },
+  article: { base: "book", u: ["Artículo", "Article"], g: ["Serie", "Series"] },
+  diary: { base: "book", u: ["Entrada", "Entry"], g: ["Cuaderno", "Notebook"] },
+  letters: { base: "book", u: ["Carta", "Letter"], g: ["Parte", "Part"] },
+  film: { base: "script", u: ["Escena", "Scene"], g: ["Acto", "Act"] },
+  theatre: { base: "script", u: ["Escena", "Scene"], g: ["Acto", "Act"] },
+  comic: { base: "script", u: ["Página", "Page"], g: ["Número", "Issue"] },
+  audio: { base: "script", u: ["Escena", "Scene"], g: ["Episodio", "Episode"] },
+};
+
+// Datos editoriales de un libro (o saga/universo): salen en la portada de las exportaciones. formato: tipo de obra (libro o guion).
+export interface Meta { author?: string; year?: string; blurb?: string; cover?: string; cw?: number; ch?: number; formato?: Formato } // cover = data URL de la imagen (cw×ch px)
 
 export interface Node {
   id: string;
   kind: Kind;
   title: string;
-  content?: string; // HTML de la escena
+  content?: string; // HTML del texto (solo capítulos y escenas)
   summary?: string; // sinopsis breve (corcho)
   goal?: number; // meta de palabras de la escena
-  meta?: Meta; // solo universo/saga/libro
-  status?: Status; // estado de la escena (borrador/revisada/final)
+  meta?: Meta; // solo universo/saga/libro/guion
+  status?: Status; // estado del capítulo/escena (borrador/revisada/final)
   date?: string; // fecha en la línea de tiempo cronológica (texto libre; ordena lexicográficamente, usar ISO)
   children: Node[];
 }
 
-export const childKind: Record<Kind, Kind | null> = {
-  blank: "scene",
-  universe: "saga",
-  saga: "book",
-  book: "part",
-  part: "chapter",
-  chapter: "scene",
-  scene: null,
+// Qué tipos de hijo admite cada nivel (el primero es el que crea «+»). Un libro tiene capítulos, sueltos o en partes;
+// las escenas solo existen en los guiones. Un universo admite sagas, libros y guiones sueltos.
+export const ACEPTA: Record<Kind, Kind[]> = {
+  blank: ["chapter", "part", "book", "script", "saga", "universe"], universe: ["saga", "book", "script"], saga: ["book"],
+  book: ["chapter", "part"], part: ["chapter"], script: ["scene", "act"], act: ["scene"], chapter: [], scene: [],
 };
-
-// Qué tipos de hijo admite cada nivel (el primero es el que crea «+»). Un universo admite sagas y libros sueltos.
-export const ACEPTA: Record<Kind, Kind[]> = { blank: ["scene", "chapter", "part", "book", "saga", "universe"], universe: ["saga", "book"], saga: ["book"], book: ["part"], part: ["chapter"], chapter: ["scene"], scene: [] };
+export const childKind = Object.fromEntries(Object.entries(ACEPTA).map(([k, v]) => [k, v[0] ?? null])) as Record<Kind, Kind | null>;
 export const esContenedor = (k: Kind) => k === "universe" || k === "saga";
+export const esObra = (k: Kind) => k === "book" || k === "script"; // tiene datos editoriales y se exporta sola
+export const conTexto = (k: Kind) => k === "chapter" || k === "scene"; // donde se escribe
 
-export function newNode(kind: Kind, n: number): Node {
-  return { id: crypto.randomUUID(), kind, title: `${t(`kindT.${kind}`)} ${n}`, content: kind === "scene" ? "" : undefined, children: [] };
+// Nombre de un tipo de nodo según el tipo de obra («Poema», «Entrada», «Página»…); sin formato, el genérico.
+export function etiqueta(kind: Kind, formato?: Formato, mayus = true): string {
+  const f = formato && FORMATOS[formato];
+  const par = f && (conTexto(kind) ? f.u : kind === "part" || kind === "act" ? f.g : null);
+  const s = par ? par[getLang() === "en" ? 1 : 0] : t(`kindT.${kind}`);
+  return mayus ? s : s.toLowerCase();
+}
+export const formatoDe = (root: Node, id: string): Formato | undefined => { const o = bookOf(root, id); return o?.meta?.formato ?? (o?.kind === "script" ? "film" : o ? "novel" : undefined); };
+
+// Un diario titula cada entrada con la fecha del día.
+export function newNode(kind: Kind, n: number, formato?: Formato): Node {
+  const title = formato === "diary" && conTexto(kind) ? new Date().toLocaleDateString(getLang(), { day: "numeric", month: "long", year: "numeric" }) : `${etiqueta(kind, formato)} ${n}`;
+  return { id: crypto.randomUUID(), kind, title, content: conTexto(kind) ? "" : undefined, children: [] };
 }
 
 export function find(root: Node, id: string): Node | undefined {
@@ -56,7 +82,7 @@ export function addChild(root: Node, parentId: string, want?: Kind): [Node, Node
   const parent = find(root, parentId);
   const kind = parent && (want && ACEPTA[parent.kind].includes(want) ? want : childKind[parent.kind]);
   if (!kind) return [root, null];
-  const child = newNode(kind, parent.children.length + 1);
+  const child = newNode(kind, parent.children.length + 1, formatoDe(root, parentId));
   return [update(root, parentId, (p) => ({ ...p, children: [...p.children, child] })), child];
 }
 
@@ -73,14 +99,15 @@ export function totalWords(n: Node): number {
   return countWords(n.content) + n.children.reduce((s, c) => s + totalWords(c), 0);
 }
 
-export function sampleBook(): Node {
-  const book = newNode("book", 1);
-  book.title = "Mi historia";
-  let [b, part] = addChild(book, book.id);
-  let chap: Node | null;
-  [b, chap] = addChild(b, part!.id);
-  [b] = addChild(b, chap!.id);
-  return b;
+// Libro nuevo: un capítulo (o poema, entrada…) listo para escribir; las partes se añaden si se quieren.
+export function sampleBook(formato?: Formato): Node {
+  const book: Node = { ...newNode("book", 1), title: "Mi historia", ...(formato && formato !== "novel" ? { meta: { formato } } : {}) };
+  return addChild(book, book.id)[0];
+}
+
+export function sampleScript(formato?: Formato): Node {
+  const s: Node = { ...newNode("script", 1), title: t("kindT.script"), ...(formato && formato !== "film" ? { meta: { formato } } : {}) };
+  return addChild(s, s.id)[0];
 }
 
 function insertBefore(root: Node, targetId: string, n: Node): Node {
@@ -106,6 +133,7 @@ export function htmlToMd(html = ""): string {
     .replace(/<\/?(em|i)>/gi, "*")
     .replace(/<li[^>]*>/gi, "- ")
     .replace(/<br\s*\/?>/gi, "  \n")
+    .replace(/<hr\s*\/?>/gi, "\n\n* * *\n\n")
     .replace(/<\/(p|li|ul|ol|blockquote)>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&")
@@ -113,14 +141,14 @@ export function htmlToMd(html = ""): string {
     .trim();
 }
 
-export const level: Record<Kind, number> = { blank: 0, universe: 1, saga: 2, book: 3, part: 4, chapter: 5, scene: 6 };
+export const level: Record<Kind, number> = { blank: 0, universe: 1, saga: 2, book: 3, script: 3, part: 4, act: 4, chapter: 5, scene: 5 };
 
 // «de Autor · 2024» y la sinopsis de un nodo con metadatos.
 export const lineaMeta = (m?: Meta) => [m?.author && `de ${m.author}`, m?.year].filter(Boolean).join(" · ");
 
 // El encabezado de la raíz es # y los demás bajan según su nivel; un libro suelto sigue empezando en #.
 export function toMarkdown(n: Node, base = level[n.kind] - 1): string {
-  const own = `${"#".repeat(Math.min(6, level[n.kind] - base))} ${n.title}\n\n${n.meta ? [lineaMeta(n.meta) && `*${lineaMeta(n.meta)}*`, n.meta.blurb && "> " + n.meta.blurb.replace(/\n+/g, " ")].filter(Boolean).join("\n\n") + "\n\n" : ""}${n.kind === "scene" ? htmlToMd(n.content) + "\n\n" : ""}`;
+  const own = `${"#".repeat(Math.min(6, level[n.kind] - base))} ${n.title}\n\n${n.meta ? [lineaMeta(n.meta) && `*${lineaMeta(n.meta)}*`, n.meta.blurb && "> " + n.meta.blurb.replace(/\n+/g, " ")].filter(Boolean).join("\n\n") + "\n\n" : ""}${conTexto(n.kind) ? htmlToMd(n.content) + "\n\n" : ""}`;
   return own + n.children.map((c) => toMarkdown(c, base)).join("");
 }
 
@@ -140,27 +168,57 @@ export type CharField = (typeof CHAR_SHORT)[number] | (typeof CHAR_LONG)[number]
 export interface Card extends Partial<Record<CharField, string>> { id: string; type: CardType; name: string; alias?: string; notes: string; links?: Link[]; x?: number; y?: number } // alias: apodos o nombres cortos separados por comas
 export interface Version { id: string; at: string; label: string; auto?: boolean; book: Node; cards: Card[] }
 export interface DayLog { start: number; end: number }
-export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number; ext?: Record<string, any> } // ext: datos de plugins, por id de herramienta
+// ext: datos de plugins, por id de herramienta. lang: idioma en que está escrita la obra (corrector); last: lo último que se abrió.
+export interface Project { book: Node; cards: Card[]; goal: number; versions: Version[]; log: Record<string, DayLog>; dailyGoal: number; ext?: Record<string, any>; lang?: string; last?: string }
 
-export type Tipo = "blank" | "book" | "saga" | "universe";
+export type Tipo = "blank" | "book" | "script" | "saga" | "universe";
 
 // `tipo`: en blanco (raíz vacía), libro suelto, o saga/universo con un primer libro dentro; `tpl`: libro con esa estructura. `title` nombra la raíz (vacío = nombre por defecto).
-export function newProject(tipo: Tipo = "book", title = "", tpl?: Template): Project {
+// `formato`: tipo de obra (poemario, diario, teatro…); el de base guion crea un guion aunque `tipo` sea "book".
+export function newProject(tipo: Tipo = "book", title = "", tpl?: Template, lang: string = getLang(), formato?: Formato): Project {
   let root: Node;
+  if (formato && FORMATOS[formato].base === "script") tipo = "script";
   if (tipo === "blank") root = { id: crypto.randomUUID(), kind: "blank", title: title || "Proyecto", children: [] };
+  else if (tipo === "script") root = { ...sampleScript(formato), ...(title ? { title } : {}) };
   else if (tpl) root = applyTemplate({ ...newNode("book", 1), title: title || "Mi historia" }, tpl);
-  else root = sampleBook();
-  if (tipo === "blank" || tpl) { /* ya está */ }
+  else root = sampleBook(formato);
+  if (tipo === "blank" || tipo === "script" || tpl) { /* ya está */ }
   else if (tipo === "book") { if (title) root.title = title; }
   else { root.title = "Libro 1"; root = wrapIn(root, tipo as "saga" | "universe", title || (tipo === "saga" ? "Mi saga" : "Mi universo")); }
-  return { book: root, cards: [], goal: 0, versions: [], log: {}, dailyGoal: 0 };
+  return { book: root, cards: [], goal: 0, versions: [], log: {}, dailyGoal: 0, lang };
+}
+
+// Proyectos antiguos: los capítulos de los libros tenían escenas. Ahora el capítulo guarda el texto: sus escenas se
+// funden en él, separadas con <hr> («* * *» al exportar). Devuelve el mismo nodo si no había nada que fundir.
+const AVANCE: Record<Status, number> = { draft: 0, revised: 1, final: 2 };
+function fundir(ch: Node): Node {
+  const ss = ch.children.filter((c) => c.kind === "scene");
+  if (!ss.length) return ch;
+  const conLetra = (h?: string) => !!h && h.replace(/<[^>]+>/g, "").trim() !== "";
+  const st = ss.map((s) => s.status).filter((x): x is Status => !!x).sort((a, b) => AVANCE[a] - AVANCE[b])[0]; // el menos avanzado
+  const goal = ss.reduce((n, s) => n + (s.goal ?? 0), ch.goal ?? 0);
+  return {
+    ...ch,
+    content: [ch.content, ...ss.map((s) => s.content)].filter(conLetra).join("<hr>"),
+    summary: [ch.summary, ...ss.map((s) => s.summary)].filter((x) => x?.trim()).join("\n") || undefined,
+    goal: goal || undefined, status: ch.status ?? st, date: ch.date ?? ss.find((s) => s.date)?.date,
+    children: ch.children.filter((c) => c.kind !== "scene"),
+  };
+}
+export function aCapitulos(n: Node, guion = false): Node {
+  if (n.kind === "script") guion = true;
+  if (n.kind === "chapter" && !guion) return fundir(n);
+  const cs = n.children.map((c) => aCapitulos(c, guion));
+  return cs.some((c, i) => c !== n.children[i]) ? { ...n, children: cs } : n;
 }
 
 // Acepta proyectos guardados con el formato v0 (solo el libro).
 export function normalize(raw: any): Project {
-  if (raw?.kind === "book") return { ...newProject(), book: raw };
-  if (["blank", "book", "saga", "universe"].includes(raw?.book?.kind)) return { book: raw.book, cards: fixCards(raw.cards), goal: raw.goal ?? 0, versions: (raw.versions ?? []).map((v: any) => ({ ...v, cards: fixCards(v.cards) })), log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {} };
-  return newProject();
+  if (raw?.kind === "book") return normalize({ book: raw });
+  if (!["blank", "book", "script", "saga", "universe"].includes(raw?.book?.kind)) return newProject();
+  const p: Project = { book: raw.book, cards: fixCards(raw.cards), goal: raw.goal ?? 0, versions: (raw.versions ?? []).map((v: any) => ({ ...v, cards: fixCards(v.cards) })), log: raw.log ?? {}, dailyGoal: raw.dailyGoal ?? 0, ext: raw.ext ?? {}, lang: typeof raw.lang === "string" ? raw.lang : undefined, last: typeof raw.last === "string" ? raw.last : undefined };
+  const b = aCapitulos(p.book);
+  return b === p.book ? p : { ...snapshot(p, t("snap.beforeChapters"), true), book: b };
 }
 
 // Versiones: snapshots del libro y fichas (inmutables, así que se comparte estructura en memoria).
@@ -178,21 +236,22 @@ export function snapshot(p: Project, label: string, auto = false): Project {
 export function restore(p: Project, id: string): Project {
   const v = p.versions.find((x) => x.id === id);
   if (!v) return p;
-  return { ...snapshot(p, "Antes de restaurar", true), book: v.book, cards: v.cards };
+  return { ...snapshot(p, "Antes de restaurar", true), book: aCapitulos(v.book), cards: v.cards };
 }
 
 export interface Scene { scene: Node; path: string }
 
+// Unidades de texto en orden de lectura: capítulos de un libro o escenas de un guion (el nombre viene de cuando todo eran escenas).
 export function scenes(n: Node, path = "", raiz = true): Scene[] {
-  const here = raiz && (n.kind === "book" || esContenedor(n.kind)) ? "" : path ? `${path} › ${n.title}` : n.title; // el título de la raíz no va en la ruta
-  return n.kind === "scene" ? [{ scene: n, path }] : n.children.flatMap((c) => scenes(c, here, false));
+  const here = raiz && (esObra(n.kind) || esContenedor(n.kind)) ? "" : path ? `${path} › ${n.title}` : n.title; // el título de la raíz no va en la ruta
+  return conTexto(n.kind) ? [{ scene: n, path }] : n.children.flatMap((c) => scenes(c, here, false));
 }
 
-export const firstScene = (n: Node): Node | undefined => (n.kind === "scene" ? n : n.children.map(firstScene).find(Boolean));
-export const books = (n: Node): Node[] => (n.kind === "book" ? [n] : n.children.flatMap(books));
-// Libro que contiene (o es) el nodo `id`; undefined si cuelga de una saga sin libro.
+export const firstScene = (n: Node): Node | undefined => (conTexto(n.kind) ? n : n.children.map(firstScene).find(Boolean));
+export const books = (n: Node): Node[] => (esObra(n.kind) ? [n] : n.children.flatMap(books));
+// Obra (libro o guion) que contiene (o es) el nodo `id`; undefined si cuelga de una saga sin libro.
 export function bookOf(root: Node, id: string): Node | undefined {
-  if (root.kind === "book") return find(root, id) ? root : undefined;
+  if (esObra(root.kind)) return find(root, id) ? root : undefined;
   return root.children.map((c) => bookOf(c, id)).find(Boolean);
 }
 // Convierte el proyecto en una saga/universo: la raíz actual pasa a ser su primer libro.
@@ -254,7 +313,7 @@ export function analyze(text: string, names: string[] = []): Style {
   };
 }
 
-export const plainText = (n: Node): string => [n.kind === "scene" ? (n.content ?? "").replace(/<\/(p|h\d|li)>/gi, ". ").replace(/<[^>]+>/g, " ") : "", ...n.children.map(plainText)].join(" ");
+export const plainText = (n: Node): string => [conTexto(n.kind) ? (n.content ?? "").replace(/<\/(p|h\d|li)>/gi, ". ").replace(/<[^>]+>/g, " ") : "", ...n.children.map(plainText)].join(" ");
 
 // Porcentaje de palabras en párrafos de diálogo (empiezan por raya o comillas).
 export function dialogueShare(n: Node): number {
@@ -293,7 +352,7 @@ export function replaceAll(book: Node, q: string, r: string): [Node, number] {
   const re = new RegExp(esc(q), "giu");
   let count = 0;
   const go = (n: Node): Node =>
-    n.kind === "scene"
+    conTexto(n.kind)
       ? { ...n, content: (n.content ?? "").replace(/(<[^>]*>)|([^<]+)/g, (_, tag, text) => (tag ? tag : text.replace(re, () => (count++, r)))) }
       : { ...n, children: n.children.map(go) };
   return [go(book), count];
@@ -368,7 +427,7 @@ const TEMPLATES_EN: Template[] = [
 // Estructuras integradas en el idioma de la interfaz (mismo orden y número que TEMPLATES).
 export const templates = (): Template[] => (getLang() === "en" ? TEMPLATES_EN : TEMPLATES);
 
-// Añade las partes de la plantilla al final del libro; cada capítulo con una escena vacía.
+// Añade las partes de la plantilla al final del libro; cada capítulo, vacío y listo para escribir.
 export function applyTemplate(book: Node, t: Template): Node {
   const parts = t.parts.map((p) => {
     const part = newNode("part", 0);
@@ -376,7 +435,6 @@ export function applyTemplate(book: Node, t: Template): Node {
     part.children = p.chapters.map((title) => {
       const chapter = newNode("chapter", 0);
       chapter.title = title;
-      chapter.children = [newNode("scene", 1)];
       return chapter;
     });
     return part;

@@ -43,6 +43,7 @@ export function candidates(text: string, cards: Named[], ignored: Set<string> = 
   const out = new Map<string, Candidate>();
   const re = new RegExp(`(?<![${L}])\\p{Lu}[${L}]{2,}(?:\\s\\p{Lu}[${L}]{2,})*(?![${L}])`, "gu");
   for (const m of text.matchAll(re)) {
+    if (m[0] === m[0].toUpperCase()) continue; // TODO EN MAYÚSCULAS: sonido, sigla o encabezado de guion, no un nombre
     const before = text.slice(0, m.index!).trimEnd();
     const startsSentence = before === "" || /[.!?¿¡:…"«—–-]$/.test(before);
     const words = m[0].split(/\s+/);

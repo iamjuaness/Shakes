@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, Extension, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Card, Node, Project, templates, addChild, esContenedor, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, remove, replaceAll, restore, search, shift, snapshot, today, totalWords, update, wrapIn, writtenOn } from "./tree";
+import { Card, Formato, Node, Project, templates, addChild, books, conTexto, formatoDe, esContenedor, esObra, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, remove, replaceAll, restore, search, shift, snapshot, today, totalWords, update, wrapIn, writtenOn } from "./tree";
 import { Analysis, CardForm, Corkboard, RelationMap, SearchPanel, Timeline, Versions } from "./Views";
 import Tree from "./TreeView";
 import { BookMeta } from "./BookMeta";
 import { DialogHost, ask, choose, confirmAsk } from "./dialog";
 import { idbGet, idbSet, recentAdd } from "./store";
-import { PluginState, activeTheme, allSceneTemplates, allStructures, themeCss } from "./plugins";
+import { PluginState, activeTheme, allSceneTemplates, allStructures, install, themeCss } from "./plugins";
 import { PluginsPanel } from "./PluginsPanel";
 import { SettingsPanel } from "./SettingsPanel";
-import { isDark, useSettings } from "./settings";
+import { isDark, saveSettings, useSettings } from "./settings";
 import { Ribbon } from "./Ribbon";
-import { pickProject, saveProjectAs, writeProject } from "./fileio";
+import { canSavePick, pickProject, saveProjectAs, writeProject } from "./fileio";
 import { ExportKind, exportAs } from "./exporting";
-import type { Update } from "./update";
+import { compareVersions, type Update } from "./update";
 import { Key, t, tr } from "./i18n";
-import { ESSENTIAL, TOOLS, catalog } from "../plugins/index";
+import { SPELL_LANGS, langName, ortografia } from "./spell";
+import { ESSENTIAL, ESSENTIAL_NEW, RETIRED, TOOLS, catalog } from "../plugins/index";
 import type { ToolHost, ToolPlugin } from "./pluginApi";
 import { loadTool } from "./extTools";
 import "./App.css";
@@ -24,13 +25,38 @@ import "./App.css";
 type Tab = string; // pestaña fija o id de una herramienta con Panel
 const TABS = ["book", "cork", "cards", "timeline", "map", "style", "search", "versions"] as const; // pestañas fijas; su texto es t("tab.<id>")
 
-function SceneEditor({ html, onChange, tools, host }: { html: string; onChange: (html: string) => void; tools: ToolPlugin[]; host: ToolHost }) {
+// Tipo de párrafo de guion (data-sp="heading|action|character|…"). Vive en el núcleo para que el texto lo conserve
+// aunque el plugin Guion no esté cargado; el formato y las teclas los pone el plugin.
+const SpAttr = Extension.create({
+  name: "spAttr",
+  addGlobalAttributes: () => [{ types: ["paragraph"], attributes: { sp: { default: null, parseHTML: (el) => el.getAttribute("data-sp"), renderHTML: (a) => (a.sp ? { "data-sp": a.sp } : {}) } } }],
+});
+
+// Poesía: Intro = verso nuevo (salto de línea); Intro en un verso vacío = estrofa nueva (párrafo).
+const Verso = Extension.create({
+  name: "verso",
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => {
+        const { $from, empty } = this.editor.state.selection;
+        if (!empty || $from.parent.type.name !== "paragraph" || !$from.parent.textContent) return false;
+        if ($from.nodeBefore?.type.name === "hardBreak") return this.editor.chain().deleteRange({ from: $from.pos - 1, to: $from.pos }).splitBlock().run();
+        return this.editor.commands.setHardBreak();
+      },
+    };
+  },
+});
+
+// `lang`: idioma de la obra; null = sin corrector. El corrector del navegador se apaga (lo sustituye el nuestro, en el idioma del libro).
+// `formato`: tipo de obra (la poesía cambia el Intro; el resto lo usan los plugins y el CSS).
+function SceneEditor({ html, onChange, tools, host, lang, formato }: { html: string; onChange: (html: string) => void; tools: ToolPlugin[]; host: ToolHost; lang: string | null; formato?: Formato }) {
   const hostRef = useRef(host);
   hostRef.current = host;
   const editor = useEditor({
-    extensions: [StarterKit, ...tools.flatMap((t) => t.extensions?.(() => hostRef.current) ?? [])],
+    extensions: [StarterKit, SpAttr, ...(formato === "poetry" ? [Verso] : []), ...(lang ? [ortografia(lang, () => hostRef.current.cards, (m) => hostRef.current.notify(m))] : []), ...tools.flatMap((t) => t.extensions?.(() => hostRef.current) ?? [])],
     content: html,
     autofocus: "end",
+    editorProps: { attributes: { spellcheck: "false", lang: host.bookLang } },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
   useEffect(() => { if (editor) tools.forEach((t) => t.refresh?.(editor)); }, [editor, host.cards]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -50,12 +76,13 @@ function SceneEditor({ html, onChange, tools, host }: { html: string; onChange: 
           <span className="sep" />
           {btn("•", t("fmt.list"), editor.isActive("bulletList"), () => c().toggleBulletList().run())}
           {btn("❝", t("fmt.quote"), editor.isActive("blockquote"), () => c().toggleBlockquote().run())}
+          {btn("⁂", t("fmt.sep"), false, () => c().setHorizontalRule().run())}
           <span className="sep" />
           {btn("↶", t("fmt.undo"), false, () => c().undo().run())}
           {btn("↷", t("fmt.redo"), false, () => c().redo().run())}
         </div>
       )}
-      <div className="editor-row">
+      <div className={`editor-row fmt-${formato ?? "novel"}`}>
         <EditorContent editor={editor} className="editor" />
         {editor && tools.map((t) => t.Overlay && <t.Overlay key={t.id} editor={editor} host={host} />)}
       </div>
@@ -63,12 +90,15 @@ function SceneEditor({ html, onChange, tools, host }: { html: string; onChange: 
   );
 }
 
-export default function App({ initial, handle: savedHandle, granted, onNew, onClose, update: info, onUpdate }: { initial: Project; handle: any; granted: boolean; onNew: () => void; onClose: () => void; update: Update | null; onUpdate: (u: Update | null) => void }) {
+// `hidden`: la pantalla de inicio está encima (Nuevo…); App sigue montada para no perder el estado ni el autoguardado.
+export default function App({ initial, handle: savedHandle, granted, onNew, onClose, update: info, onUpdate, hidden = false }: { initial: Project; handle: any; granted: boolean; onNew: () => void; onClose: () => void; update: Update | null; onUpdate: (u: Update | null) => void; hidden?: boolean }) {
   const [project, setProject] = useState<Project>(initial);
   const { book, cards, goal } = project;
   const setBook = (f: (b: Node) => Node) => setProject((p) => ({ ...p, book: f(p.book) }));
   const setCards = (f: (c: Card[]) => Card[]) => setProject((p) => ({ ...p, cards: f(p.cards) }));
-  const [selected, setSelected] = useState<string>(() => firstScene(book)?.id ?? book.id);
+  // Se vuelve a lo último que se abrió (no al primer capítulo): retomar donde se dejó.
+  const [selected, setSel] = useState<string>(() => (initial.last && find(book, initial.last) ? initial.last : firstScene(book)?.id ?? book.id));
+  const setSelected = (id: string) => { setSel(id); setProject((p) => (p.last === id ? p : { ...p, last: id })); };
   const [ambito, setAmbito] = useState<"libro" | "todo">("libro"); // en una saga/universo: vistas y exportación del libro actual o de todo
   const [cardId, setCardId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("book");
@@ -124,8 +154,14 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   useEffect(() => {
     // Primera vez (sin marca `seeded`, aunque haya un estado vacío guardado): se instalan los esenciales que falten; el resto queda en «Disponibles».
     // Instalaciones de antes de las herramientas externas: tenían la herramienta compilada en la app; ahora se les da su código del catálogo.
-    const migrate = (s: PluginState): PluginState => ({ ...s, plugins: s.plugins.map((p) => { const c = p.tool && !p.code && !TOOLS.some((x) => x.id === p.tool) ? catalog.find((x) => x.id === p.id) : undefined; return c?.code ? { ...p, main: c.main, code: c.code } : p; }) });
-    const seed = (s: PluginState): PluginState => migrate(s.seeded ? s : { ...s, seeded: true, plugins: [...s.plugins, ...catalog.filter((c) => ESSENTIAL.includes(c.id) && !s.plugins.some((p) => p.id === c.id))] });
+    // Los plugins que trae la app se actualizan solos si la app trae una versión más nueva; los retirados (su función pasó al núcleo) se quitan.
+    const migrate = (s: PluginState): PluginState => ({ ...s, plugins: s.plugins.filter((p) => !RETIRED.includes(p.id)).map((p) => {
+      const c = p.tool && !TOOLS.some((x) => x.id === p.tool) ? catalog.find((x) => x.id === p.id) : undefined;
+      return c?.code && (!p.code || compareVersions(c.version, p.version) > 0) ? { ...p, version: c.version, main: c.main, code: c.code } : p;
+    }) });
+    // Esenciales nuevos: se instalan una sola vez en instalaciones antiguas (si luego se quitan, no vuelven).
+    const nuevos = (s: PluginState): PluginState => { const ids = ESSENTIAL_NEW.filter((id) => !s.offered?.includes(id)); return ids.length ? { ...s, offered: [...(s.offered ?? []), ...ids], plugins: [...s.plugins, ...catalog.filter((c) => ids.includes(c.id) && !s.plugins.some((p) => p.id === c.id))] } : s; };
+    const seed = (s: PluginState): PluginState => migrate(nuevos(s.seeded ? s : { ...s, seeded: true, plugins: [...s.plugins, ...catalog.filter((c) => ESSENTIAL.includes(c.id) && !s.plugins.some((p) => p.id === c.id))] }));
     idbGet<PluginState>("plugins").then((s) => { plugLoaded.current = true; setPlug(seed(s ?? { plugins: [], theme: null })); })
       .catch(() => setPlug(seed({ plugins: [], theme: null }))); // no se pudo leer: esenciales en memoria, sin sobrescribir lo guardado
   }, []);
@@ -135,6 +171,12 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     if (!el) { el = document.createElement("style"); el.id = "shakes-plugin-theme"; document.head.appendChild(el); }
     el.textContent = themeCss(activeTheme(plug));
   }, [plug]);
+  // Un proyecto con guion necesita el plugin Guion (formato y teclas): viene con la app, se instala solo.
+  const hayGuion = books(book).some((b) => b.kind === "script");
+  useEffect(() => {
+    const c = catalog.find((x) => x.id === "guion");
+    if (hayGuion && c && plugLoaded.current && !plug.plugins.some((p) => p.id === "guion")) setPlug((s) => install(s, c));
+  }, [hayGuion, plug]);
   const structures = [...templates(), ...allStructures(plug)];
   const sceneTpls = allSceneTemplates(plug);
   const tools = [ // herramientas instaladas: las incluidas en la app y las externas (código guardado con el plugin)
@@ -149,7 +191,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   function load(p: Project, name: string) {
     setFileName(name);
     setProject(p);
-    setSelected(p.book.id);
+    setSel(p.last && find(p.book, p.last) ? p.last : firstScene(p.book)?.id ?? p.book.id);
     setCardId(null);
     setRev((r) => r + 1);
   }
@@ -158,6 +200,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     try {
       const r = await pickProject();
       if (!r) return;
+      if (handle.current) await writeProject(handle.current, project).catch(() => {}); // lo último escrito (<600 ms) no se pierde al cambiar de archivo
       handle.current = r.handle;
       setPending(null);
       idbSet("handle", r.handle).catch(() => {});
@@ -173,8 +216,13 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     catch { setWarn(t("w.file")); }
   }
 
-  // Guarda y vuelve a la pantalla de inicio.
+  // Guarda y vuelve a la pantalla de inicio. Sin archivo, cerrar borraría el proyecto (solo vive en el navegador): se ofrece Guardar como.
   async function cerrar() {
+    if (!handle.current) {
+      const i = await choose(t("d.noFile"), [t("d.noFile.save"), t("d.noFile.close")]);
+      if (i === null) return;
+      if (i === 0) { await saveAs(); if (!handle.current && canSavePick()) return; } // sin selector, Guardar como descarga el .shks: ya se puede cerrar
+    }
     try {
       if (handle.current) { await writeProject(handle.current, project); recentAdd(handle.current); }
     } catch { if (!(await confirmAsk(t("d.closeFail")))) return; }
@@ -203,8 +251,11 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   // Atajos: Ctrl+S/Shift+S/N/O/F/, y Esc (salir de concentración). `keys` guarda siempre las funciones del último render.
   const keys = useRef<Record<string, () => void>>({});
   keys.current = { s: saveNow, S: saveAs, n: onNew, o: openFile, f: () => setTab("search"), ",": () => setTab("settings") };
+  const hiddenRef = useRef(hidden);
+  hiddenRef.current = hidden;
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
+      if (hiddenRef.current) return;
       if (e.key === "Escape") return setFocus(false);
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const k = e.shiftKey && e.key.toLowerCase() === "s" ? "S" : e.key.toLowerCase();
@@ -222,7 +273,10 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   const words = totalWords(book);
   const patchCard = (id: string, patch: Partial<Card>) => setCards((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   const openScene = (id: string) => { setSelected(id); setTab("book"); };
-  const host: ToolHost = { project, scope, setProject, openScene, notify: setStatus, t: (k, v) => t(k as Key, v), lang: settings.lang, cards, addCard: (c) => setCards((cs) => [...cs, c]), patchCard, openCard: (id) => { setCardId(id); setTab("cards"); } };
+  const bookLang = project.lang || settings.lang; // proyectos antiguos sin idioma: el de la interfaz
+  const spellLang = settings.spell && SPELL_LANGS.includes(bookLang) ? bookLang : null;
+  const langs = [...new Set([...SPELL_LANGS, bookLang])].map((c) => [c, langName(c)]).sort((a, b) => a[1].localeCompare(b[1]));
+  const host: ToolHost = { project, scope, setProject, openScene, notify: setStatus, t: (k, v) => t(k as Key, v), lang: settings.lang, bookLang, current, cards, addCard: (c) => setCards((cs) => [...cs, c]), patchCard, openCard: (id) => { setCardId(id); setTab("cards"); } };
 
   async function replaceEverywhere(q: string, r: string) {
     const hits = search(book, q);
@@ -249,29 +303,31 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   }
 
   async function addSceneTemplate() {
-    if (current?.kind !== "scene") return;
+    if (!current || !conTexto(current.kind)) return;
     const i = await choose(t("d.insertTpl"), sceneTpls.map((x) => (x.genre ? `${x.name} · ${x.genre}` : x.name)));
     if (i === null) return;
     setBook((b) => update(b, current.id, (n) => ({ ...n, content: (n.content ?? "") + sceneTpls[i].html })));
     setRev((v) => v + 1);
   }
 
-  const sceneCards = current?.kind === "scene" ? cards.filter((c) => mentions(current, c.name, c.alias).length) : [];
+  const editable = !!current && conTexto(current.kind);
+  const sceneCards = editable ? cards.filter((c) => mentions(current!, c.name, c.alias).length) : [];
   const dayWords = writtenOn(project.log, today());
 
   return (
-    <div className={`app ${focus ? "focus" : ""}`}>
+    <div className={`app ${focus ? "focus" : ""} ${settings.quiet ? "quiet" : ""}`} style={{ "--editor-size": settings.fontSize + "px", "--editor-width": settings.width + "px" } as React.CSSProperties}>
       <DialogHost />
       <Ribbon
         tabs={tabs} more={more} tab={tab} onTab={(id) => { setTab(id); if (id === "map") setCardId(null); }}
         book={book} scope={scope} current={current} ambito={ambito} onAmbito={() => setAmbito(ambito === "libro" ? "todo" : "libro")}
         goal={goal} onGoal={(n) => setProject((p) => ({ ...p, goal: n }))} onConvert={convertir}
-        onNew={onNew} onOpen={openFile} onSave={saveNow} onSaveAs={saveAs} onClose={cerrar} onExport={(k: ExportKind) => exportAs(k, scope)}
+        onNew={onNew} onOpen={openFile} onSave={saveNow} onSaveAs={saveAs} onClose={cerrar} onExport={(k: ExportKind) => exportAs(k, scope, bookLang).then((n) => { if (n) setStatus(t("st.exported", { n })); }, () => setWarn(t("w.export")))}
         onStructure={addTemplate} onSceneTpl={sceneTpls.length > 0 ? addSceneTemplate : undefined}
         onAddCard={() => host.addCard({ id: crypto.randomUUID(), type: "character", name: t("card.new"), notes: "" })}
         onScene={(patch) => current && setBook((b) => update(b, current.id, (n) => ({ ...n, ...patch })))}
         tools={tools} host={host}
         focus={focus} onFocus={() => setFocus(!focus)} onSettings={() => setTab("settings")}
+        quiet={settings.quiet} onQuiet={() => saveSettings({ quiet: !settings.quiet })}
       />
       <div className="body">
       <aside className="sidebar">
@@ -318,7 +374,8 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
 
       <main className="main">
         <header className="toolbar">
-          <span className="title">{tab === "cards" || tab === "map" ? card?.name : current?.title}</span>
+          {tab === "cards" || tab === "map" || !current ? <span className="title">{card?.name}</span>
+            : <input className="title" aria-label={t("title.rename")} title={t("title.rename")} value={current.title} onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, title: e.target.value })))} />}
         </header>
 
         {ToolPanel ? (
@@ -334,7 +391,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
         ) : tab === "search" ? (
           <SearchPanel book={book} onOpen={openScene} onReplace={replaceEverywhere} />
         ) : tab === "style" ? (
-          <Analysis book={scope} current={current} cards={cards} project={project}
+          <Analysis book={scope} current={current} cards={cards} project={project} lang={bookLang}
             onDailyGoal={(n) => setProject((p) => ({ ...p, dailyGoal: n }))} />
         ) : tab === "versions" ? (
           <Versions
@@ -364,7 +421,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
               }}
             />
           ) : <p className="empty">{t("card.empty")}</p>
-        ) : current?.kind === "scene" ? (
+        ) : editable ? (
           <>
             {sceneCards.length > 0 && (
               <div className="mentions">
@@ -373,14 +430,16 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
               </div>
             )}
             <SceneEditor
-              key={current.id + rev}
-              html={current.content ?? ""}
+              key={[current!.id, rev, bookLang, settings.spell, ...tools.map((x) => x.id)].join()} // las extensiones se fijan al crear el editor: otro idioma o plugin = editor nuevo
+              html={current!.content ?? ""}
               tools={tools}
               host={host}
-              onChange={(html) => setBook((b) => update(b, current.id, (n) => ({ ...n, content: html })))}
+              lang={spellLang}
+              formato={formatoDe(book, current!.id)}
+              onChange={(html) => setBook((b) => update(b, current!.id, (n) => ({ ...n, content: html })))}
             />
           </>
-        ) : current && (current.kind === "book" || current.kind === "saga" || current.kind === "universe") ? (
+        ) : current && (esObra(current.kind) || esContenedor(current.kind)) ? (
           <BookMeta key={current.id} node={current} onChange={(meta) => setBook((b) => update(b, current.id, (n) => ({ ...n, meta })))} />
         ) : (
           <p className="empty" style={{ whiteSpace: "pre-line" }}>{t("empty.scene")}</p>
@@ -389,7 +448,10 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
           {warn ? <span className={warn.startsWith("⚠") ? "warn" : "ok"}>{warn}</span> : <span>{fileName ? `${fileName} · ${status || t("st.open")}` : status || t("st.browserOnly")}</span>}
           {pending && <button onClick={reconnect}>{t("st.reconnect", { name: pending.name })}</button>}
           <span className="spacer" />
-          {tab === "book" && current?.kind === "scene" && <span>{t("st.words.scene", { n: countWords(current.content) + (current.goal ? ` / ${current.goal}` : "") })}</span>}
+          <select className="langsel" aria-label={t("book.lang")} title={t("book.lang")} value={bookLang} onChange={(e) => setProject((p) => ({ ...p, lang: e.target.value }))}>
+            {langs.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
+          </select>
+          {tab === "book" && editable && <span>{t("st.words.scene", { n: countWords(current!.content) + (current!.goal ? ` / ${current!.goal}` : "") })}</span>}
           <span>{t("st.today", { n: dayWords + (project.dailyGoal > 0 ? ` / ${project.dailyGoal}` : "") })}</span>
           <span>{t("st.words", { n: words })}{goal > 0 && t("st.pct", { n: Math.round((words / goal) * 100) })}</span>
         </div>

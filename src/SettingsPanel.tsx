@@ -50,6 +50,20 @@ export function SettingsPanel({ update, onUpdate }: { update: Update | null; onU
         </select>
       </label>
 
+      <h3>{t("set.writing")}</h3>
+      <label className="check"><input type="checkbox" checked={s.spell} onChange={(e) => saveSettings({ spell: e.target.checked })} /> {t("set.spell")}</label>
+      <p className="muted">{t("set.spell.hint")}</p>
+      <label className="srow">{t("set.font")}
+        <select value={s.fontSize} onChange={(e) => saveSettings({ fontSize: Number(e.target.value) })}>
+          {[15, 17, 19, 21, 23, 26].map((n) => <option key={n} value={n}>{n} px</option>)}
+        </select>
+      </label>
+      <label className="srow">{t("set.width")}
+        <select value={s.width} onChange={(e) => saveSettings({ width: Number(e.target.value) })}>
+          <option value={560}>{t("set.width.n")}</option><option value={700}>{t("set.width.m")}</option><option value={900}>{t("set.width.w")}</option>
+        </select>
+      </label>
+
       <h3>{t("set.projects")}</h3>
       <div className="srow">
         <span>{t("set.dir")}</span>

@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/react";
 import { Plugin } from "@tiptap/pm/state";
 import type { ToolPlugin } from "../types";
 import { tipografia } from "./tipografia";
+import { enEspanol } from "../_comun/texto";
 
 const Dialogo = Extension.create({
   name: "dialogoAuto",
@@ -21,4 +22,4 @@ const Dialogo = Extension.create({
   },
 });
 
-export const dialogoAuto: ToolPlugin = { id: "dialogo-auto", name: "Diálogo y comillas", extensions: () => [Dialogo] };
+export const dialogoAuto: ToolPlugin = { id: "dialogo-auto", name: "Diálogo y comillas", extensions: (host) => (enEspanol(host()) ? [Dialogo] : []) }; // raya y comillas españolas
