@@ -1,7 +1,7 @@
 {
   "name": "shakes",
   "private": true,
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "GPL-3.0-only",
   "author": "iamjuaness",
   "version": "0.8.0",
   "type": "module",

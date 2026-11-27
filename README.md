@@ -8,7 +8,7 @@
   <a href="https://github.com/iamjuaness/Shakes/actions/workflows/build.yml"><img alt="Build" src="https://github.com/iamjuaness/Shakes/actions/workflows/build.yml/badge.svg"></a>
   <a href="https://github.com/iamjuaness/Shakes/releases/latest"><img alt="Última versión" src="https://img.shields.io/github/v/release/iamjuaness/Shakes?display_name=tag&color=9c4f1f"></a>
   <a href="https://github.com/iamjuaness/Shakes/releases"><img alt="Descargas" src="https://img.shields.io/github/downloads/iamjuaness/Shakes/total?color=9c4f1f"></a>
-  <a href="LICENSE"><img alt="Licencia" src="https://img.shields.io/badge/licencia-uso%20libre%2C%20sin%20venta-9c4f1f"></a>
+  <a href="LICENSE"><img alt="Licencia" src="https://img.shields.io/badge/licencia-GPL--3.0-9c4f1f"></a>
   <img alt="Plataforma" src="https://img.shields.io/badge/plataforma-Windows-0078D4?logo=windows&logoColor=white">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
   <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black">
@@ -168,11 +168,9 @@ El CI compila el instalador y lo adjunta al release.
 
 ## Licencia
 
-Shakes es **gratuito y de código visible**. Puedes usarlo para lo que quieras, estudiarlo, modificarlo y redistribuirlo, con estas reglas:
+Shakes es software libre bajo la **GNU General Public License v3.0**. Puedes usarlo, estudiarlo, modificarlo y redistribuirlo. Si distribuyes una versión modificada, debes publicar su código fuente bajo la misma licencia.
 
-- **Siempre gratuito:** no se puede vender, alquilar, cobrar por suscripción ni monetizar su distribución, ni original ni modificado.
-- **Las modificaciones** usan esta misma licencia, con su código fuente, y deben dejar claro que no son la versión oficial (otro nombre e icono).
-- **Lo que escribes es tuyo:** todo lo que cualquier persona cree con Shakes pertenece únicamente a esa persona. Nadie más adquiere derechos sobre ello.
+Lo que escribes con Shakes sigue siendo tuyo. La licencia cubre el software, no tus textos.
 
 Texto completo en [LICENSE](LICENSE).
 

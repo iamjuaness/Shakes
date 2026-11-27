@@ -3,7 +3,7 @@ name = "shakes"
 version = "0.8.0"
 description = "Shakes: herramienta de escritura de historias"
 authors = ["iamjuaness"]
-license-file = "../LICENSE"
+license = "GPL-3.0-only"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
