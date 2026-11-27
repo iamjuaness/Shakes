@@ -1,4 +1,4 @@
-// Guardar un archivo (eligiendo dónde, si el navegador o el escritorio lo permiten) o abrir el diálogo de impresión con un HTML.
+// Guardar un archivo (eligiendo dónde, si el navegador o el escritorio lo permiten) .
 // Devuelve el nombre con que se guardó; null si se canceló.
 export async function guardar(name: string, data: BlobPart, type: string): Promise<string | null> {
   const w = window as any;
@@ -17,14 +17,6 @@ export async function guardar(name: string, data: BlobPart, type: string): Promi
   a.click();
   URL.revokeObjectURL(a.href);
   return name;
-}
-
-export function imprimir(html: string) {
-  const f = document.createElement("iframe");
-  f.style.cssText = "position:fixed;width:0;height:0;border:0";
-  f.srcdoc = html;
-  f.onload = () => { f.contentWindow?.focus(); f.contentWindow?.print(); setTimeout(() => f.remove(), 60_000); };
-  document.body.appendChild(f);
 }
 
 // Selector de archivo: devuelve el elegido o null.

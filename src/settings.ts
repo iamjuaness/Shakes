@@ -13,9 +13,10 @@ export interface Settings {
   quiet: boolean; // escribir sin subrayados (ortografía, estilo, repeticiones): se revisa después
   fontSize: number; // px del texto del editor
   width: number; // ancho máximo de la columna de texto, en px
+  tour: boolean; // el recorrido de la primera vez ya se vio
 }
 
-export const DEFAULTS: Settings = { lang: detectLang(), theme: "auto", copyMinutes: 10, checkUpdates: true, spell: true, quiet: false, fontSize: 19, width: 700 };
+export const DEFAULTS: Settings = { lang: detectLang(), theme: "auto", copyMinutes: 10, checkUpdates: true, spell: true, quiet: false, fontSize: 19, width: 700, tour: false };
 
 let cur: Settings = DEFAULTS;
 const subs = new Set<() => void>();
@@ -33,6 +34,9 @@ export const useSettings = (): Settings => useSyncExternalStore((f) => { subs.ad
 
 export const getProjectsDir = () => idbGet<any>("projectsDir").catch(() => undefined);
 export const setProjectsDir = (d: any) => idbSet("projectsDir", d).catch(() => {});
+
+export const getBackupDir = () => idbGet<any>("backupDir").catch(() => undefined);
+export const setBackupDir = (d: any) => idbSet("backupDir", d).catch(() => {});
 
 export const prefersDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
 export const isDark = (s: Settings) => (s.theme === "auto" ? prefersDark() : s.theme === "dark");

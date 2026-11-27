@@ -1,9 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { MODOS, modoDe } from "./progreso";
+import type { Modo } from "./progreso";
 import { Node, STATUSES, Status, conTexto, esContenedor, etiqueta, formatoDe } from "./tree";
 import type { ToolHost, ToolPlugin } from "./pluginApi";
 import type { ExportKind } from "./exporting";
 import type { ImportKind } from "./importing";
 import { t, tr } from "./i18n";
+import { abrirPaleta } from "./Paleta";
 
 export interface Tab { id: string; label: string }
 export interface RibbonProps {
@@ -16,7 +19,9 @@ export interface RibbonProps {
   tools: ToolPlugin[]; host: ToolHost;
   focus: boolean; onFocus: () => void; onSettings: () => void;
   quiet: boolean; onQuiet: () => void;
+  vista: Vista; onVista: (v: Vista) => void;
 }
+export type Vista = "normal" | "partida" | "continua";
 
 const num = (v: string) => Math.max(0, Math.floor(Number(v))) || 0;
 
@@ -34,6 +39,15 @@ const item = (e: React.MouseEvent, run: () => void) => { close((e.currentTarget 
 export function Ribbon(p: RibbonProps) {
   useCloseMenus();
   const scene = p.current && conTexto(p.current.kind) ? p.current : undefined; // capítulo (libro) o escena (guion)
+  // Las pestañas se agrupan en cuatro modos; cada modo recuerda dónde estabas. Guía y Plugins quedan fuera.
+  const modo = modoDe(p.tab);
+  const [ultimo, setUltimo] = useState<Modo>("escribir");
+  useEffect(() => { if (modo) setUltimo(modo); }, [modo]);
+  const recuerdo = useRef<Partial<Record<Modo, string>>>({});
+  if (modo) recuerdo.current[modo] = p.tab;
+  const activo = modo ?? ultimo;
+  const tabsDe = (m: Modo) => MODOS.find((x) => x.id === m)!.tabs.flatMap((id) => p.tabs.find((x) => x.id === id) ?? []);
+  const pestana = (id: string) => <button key={id} role="tab" aria-selected={p.tab === id} className={p.tab === id ? "on" : ""} onClick={() => p.onTab(id)}>{p.tabs.find((x) => x.id === id)?.label}</button>;
   return (
     <nav className="topbar">
       <div className="tabs" role="tablist">
@@ -63,8 +77,14 @@ export function Ribbon(p: RibbonProps) {
             <button title={t("file.close.title")} onClick={(e) => item(e, p.onClose)}>{t("file.close")}</button>
           </div>
         </details>
-        {p.tabs.map((x) => <button key={x.id} role="tab" aria-selected={p.tab === x.id} className={p.tab === x.id ? "on" : ""} onClick={() => p.onTab(x.id)}>{x.label}</button>)}
+        {pestana("guide")}
+        <div className="modos" role="tablist" aria-label={t("modo.titulo")}>
+          {MODOS.map((m) => <button key={m.id} role="tab" aria-selected={modo === m.id} className={activo === m.id && p.tab !== "guide" ? "on" : ""} onClick={() => p.onTab(recuerdo.current[m.id] ?? tabsDe(m.id)[0].id)}>{t(`modo.${m.id}`)}</button>)}
+        </div>
+        <span className="spacer" />
+        {pestana("plugins")}
       </div>
+      <div className="tabs subtabs" role="tablist">{tabsDe(activo).map((x) => pestana(x.id))}</div>
       <div className="ribbon">
         <div className="rgroup">
           <div className="rbtns">
@@ -99,6 +119,8 @@ export function Ribbon(p: RibbonProps) {
         </div>
         <div className="rgroup">
           <div className="rbtns">
+            {p.tab === "book" && scene && (["partida", "continua"] as const).map((v) => <button key={v} className={p.vista === v ? "on" : ""} aria-pressed={p.vista === v} onClick={() => p.onVista(p.vista === v ? "normal" : v)}>{t(`vista.${v}`)}</button>)}
+            <button className="buscar-accion" title={t("pal.title")} aria-label={t("pal.btn")} onClick={abrirPaleta}>🔍 <kbd>Ctrl+K</kbd></button>
             <button onClick={p.onFocus}>{p.focus ? t("view.exit") : t("view.focus")}</button>
             <button title={t("view.quiet.title")} className={p.quiet ? "on" : ""} aria-pressed={p.quiet} onClick={p.onQuiet}>{p.quiet ? t("view.check") : t("view.quiet")}</button>
             <button title={t("settings.open")} aria-label={t("settings.open")} className={p.tab === "settings" ? "on" : ""} onClick={p.onSettings}>⚙</button>

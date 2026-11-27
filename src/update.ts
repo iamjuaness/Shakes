@@ -28,8 +28,15 @@ export async function checkUpdate(current: string): Promise<Update | null> {
   return parseRelease(await r.json(), current);
 }
 
-// Abre el instalador (o la página de la release) con el navegador/sistema: en Tauri vía plugin opener, en la web con window.open.
-export async function openUpdate(u: Update) {
+// En escritorio con actualizador firmado: descarga, comprueba la firma e instala (la app se cierra), previa
+// confirmación. Sin él (o si falla), abre el instalador o la página de la release en el navegador.
+export async function openUpdate(u: Update, confirmar?: () => Promise<boolean>) {
+  if (confirmar && "__TAURI_INTERNALS__" in globalThis) {
+    try {
+      const firmada = await (await import("@tauri-apps/plugin-updater")).check();
+      if (firmada) { if (await confirmar()) await firmada.downloadAndInstall(); return; }
+    } catch { /* actualizador sin activar o sin latest.json: descarga a mano */ }
+  }
   const url = u.asset ?? u.page;
   try {
     if ("__TAURI_INTERNALS__" in window) return await (await import("@tauri-apps/plugin-opener")).openUrl(url);

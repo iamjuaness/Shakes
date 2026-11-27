@@ -41,8 +41,12 @@ Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lis
 | `magia` | Sistemas de magia sencillos y complejos | Barra derecha |
 | `tramas` | Línea de tiempo de tramas y subtramas | Barra derecha |
 | `generador-nombres` | Nombres por cultura → ficha | Barra derecha |
-| `manuscrito-editorial` | Formato estándar para editoriales (PDF) | Archivo › Exportar a |
+| `mesa-edicion` | Informe editorial, correcciones (gramática, punto de vista, LanguageTool local), voces de personajes y plan de pasadas | Barra derecha |
+| `lectura-voz` | Lee en voz alta desde el cursor | Editor |
+| `kit-publicacion` | Sinopsis, contraportada, carta a editoriales y lista de publicación | Barra derecha |
 | `obsidian-sync` | Fichas → notas `.md` | Archivo › Exportar a |
 | `resumen-escenas` | Rellena sinopsis vacías | Barra derecha |
 
 Tests: `node plugins/herramientas/herramientas.test.ts` y `node plugins/herramientas/fichas-auto/detect.test.ts`.
+
+Textos visibles: usa `L("español", "English")` de `herramientas/_comun/idioma.ts` al pintar (no en constantes de módulo).

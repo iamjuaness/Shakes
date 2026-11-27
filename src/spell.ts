@@ -6,20 +6,14 @@ import { decorar } from "../plugins/herramientas/_comun/decorar";
 import { fallos, palabrasDe } from "../plugins/herramientas/ortografia/revisar";
 import { idbGet, idbSet } from "./store";
 import { namesOf, type Card } from "./tree";
-import { getLang, t } from "./i18n";
+import { t } from "./i18n";
+import { SPELL_LANGS, langName } from "./lenguas";
 import esAff from "../node_modules/dictionary-es/index.aff?url";
 import esDic from "../node_modules/dictionary-es/index.dic?url";
 import enAff from "../node_modules/dictionary-en/index.aff?url";
 import enDic from "../node_modules/dictionary-en/index.dic?url";
 
-export const SPELL_LANGS = ("bg br ca ca-valencia cs cy da de de-AT de-CH el el-polyton en en-AU en-CA en-GB en-ZA eo es es-AR es-BO es-CL es-CO es-CR es-CU es-DO es-EC es-GT es-HN es-MX es-NI es-PA es-PE es-PH es-PR es-PY es-SV es-US es-UY es-VE et eu fa fo fr fur fy ga gd gl he hr hu hy hyw ia ie is it ka ko la lb lt ltg lv mk mn nb nds ne nl nn oc pl pt pt-PT ro ru rw sk sl sr sr-Latn sv sv-FI tk tr uk vi").split(" ");
-
-// Nombre del idioma en el idioma de la interfaz («francés», «French»). Intl no conoce bien estos: [es, en].
-const NOMBRES: Record<string, [string, string]> = { "ca-valencia": ["Valenciano", "Valencian"], "el-polyton": ["Griego politónico", "Polytonic Greek"], fur: ["Friulano", "Friulian"], hyw: ["Armenio occidental", "Western Armenian"], ie: ["Interlingue", "Interlingue"], ltg: ["Latgaliano", "Latgalian"], nds: ["Bajo alemán", "Low German"] };
-export function langName(code: string): string {
-  if (NOMBRES[code]) return NOMBRES[code][getLang() === "en" ? 1 : 0];
-  try { const n = new Intl.DisplayNames([getLang()], { type: "language" }).of(code); return n ? n[0].toUpperCase() + n.slice(1) : code; } catch { return code; }
-}
+export { SPELL_LANGS, langName };
 
 const LOCAL: Record<string, string[]> = { es: [esAff, esDic], en: [enAff, enDic] };
 const texto = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.text(); });

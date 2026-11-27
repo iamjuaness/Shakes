@@ -1,8 +1,9 @@
+import { L } from "../_comun/idioma";
 import { useState } from "react";
 import { scenes } from "../../../src/tree";
 import type { ToolHost, ToolPlugin } from "../types";
 
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const mes = (y: number, m: number) => new Date(y, m - 1, 1).toLocaleDateString(L("es", "en"), { month: "long" });
 
 function Panel({ host }: { host: ToolHost }) {
   const fechas = scenes(host.project.book).filter(({ scene }) => scene.date);
@@ -14,10 +15,10 @@ function Panel({ host }: { host: ToolHost }) {
   const days = new Date(y, m, 0).getDate();
   return (
     <div className="panel">
-      <div className="row"><button onClick={() => go(-1)}>←</button><b>{MESES[m - 1]} {y}</b><button onClick={() => go(1)}>→</button>
-        <span className="muted">{fechas.length} escenas con fecha (se asignan en la cinta, grupo Escena)</span></div>
+      <div className="row"><button onClick={() => go(-1)}>←</button><b>{mes(y, m)} {y}</b><button onClick={() => go(1)}>→</button>
+        <span className="muted">{fechas.length} {L("escenas con fecha (se asignan en la cinta, grupo Escena)", "dated scenes (set the date in the ribbon, Scene group)")}</span></div>
       <div className="cal">
-        {["L", "M", "X", "J", "V", "S", "D"].map((d) => <b key={d} className="muted">{d}</b>)}
+        {L("L M X J V S D", "Mo Tu We Th Fr Sa Su").split(" ").map((d) => <b key={d} className="muted">{d}</b>)}
         {Array.from({ length: lead }, (_, i) => <div key={"e" + i} />)}
         {Array.from({ length: days }, (_, i) => {
           const iso = `${ym}-${String(i + 1).padStart(2, "0")}`;

@@ -1,5 +1,5 @@
 // Puro: Markdown / texto de DOCX -> escenas. Un título (#, o estilo Título/Heading) abre una escena nueva.
-export interface Bloque { h: boolean; t: string; n?: number } // n = nivel del título (1 = el más alto)
+export interface Bloque { h: boolean; t: string; n?: number; html?: string } // n = nivel del título (1 = el más alto); html: texto ya con formato
 export type Tipo = "part" | "chapter" | "scene";
 export interface Est { tipo: Tipo; titulo: string; html: string; hijos: Est[] }
 
@@ -20,12 +20,53 @@ export function mdBloques(md: string): Bloque[] {
   return out;
 }
 
-// `xml` = contenido de word/document.xml.
-export function docxBloques(xml: string): Bloque[] {
-  return [...xml.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)].map((m) => {
+const textos = (xml: string) => dec([...xml.matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>/g)].map((x) => x[1]).join(""));
+const marcado = (rpr: string, e: string) => new RegExp(`<w:${e}(?:\\s*/>| w:val="(?!0|false)[^"]*"\\s*/>)`).test(rpr);
+// Notas al pie de word/footnotes.xml por número (sin los separadores).
+const notasDe = (xml = "") => new Map([...xml.matchAll(/<w:footnote\b(?![^>]*w:type=)[^>]*w:id="(\d+)"[^>]*>([\s\S]*?)<\/w:footnote>/g)].map((m) => [m[1], textos(m[2]).trim()]));
+
+// Un párrafo de Word con sus negritas, cursivas, saltos y notas. El texto borrado con control de cambios no cuenta.
+function parrafoHtml(p: string, notas: Map<string, string>): string {
+  const tramos: { s: string; b: boolean; i: boolean }[] = [];
+  for (const [, r] of p.matchAll(/<w:r(?: [^>]*)?>([\s\S]*?)<\/w:r>/g)) {
+    const rpr = r.match(/<w:rPr>[\s\S]*?<\/w:rPr>/)?.[0] ?? "";
+    const b = marcado(rpr, "b"), i = marcado(rpr, "i");
+    for (const m of r.matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>|<w:br\s*\/>|<w:footnoteReference [^>]*w:id="(\d+)"[^>]*\/>/g)) {
+      const s = m[1] !== undefined ? esc(dec(m[1])) : m[2] !== undefined ? (notas.get(m[2]) ? `<span data-pie="${encodeURIComponent(notas.get(m[2])!)}"></span>` : "") : "<br>";
+      const ult = tramos[tramos.length - 1];
+      if (ult && ult.b === b && ult.i === i) ult.s += s;
+      else if (s) tramos.push({ s, b, i });
+    }
+  }
+  return tramos.map((x) => { const t = x.i ? `<em>${x.s}</em>` : x.s; return x.b ? `<strong>${t}</strong>` : t; }).join("").trim();
+}
+
+// `xml` = contenido de word/document.xml; `notas` = word/footnotes.xml.
+export function docxBloques(xml: string, notas?: string): Bloque[] {
+  const pies = notasDe(notas);
+  return [...xml.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)].map((m): Bloque => {
     const st = m[0].match(/<w:pStyle w:val="(?:Heading|Ttulo|Título|Title)(\d?)"/i);
-    return { h: !!st, n: st ? Number(st[1]) || 1 : undefined, t: dec([...m[0].matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>/g)].map((x) => x[1]).join("")).trim() };
-  }).filter((b) => b.t).map((b) => (b.h ? b : { h: false, t: b.t }));
+    const t = textos(m[0]).trim();
+    return st ? { h: true, n: Number(st[1]) || 1, t } : { h: false, t, html: parrafoHtml(m[0], pies) };
+  }).filter((b) => b.t);
+}
+
+export interface ComentarioDocx { autor: string; texto: string; cita: string; capitulo: string }
+// Comentarios de Word (word/comments.xml) con el texto señalado y el capítulo donde están.
+export function docxComentarios(xml: string, comentarios = ""): ComentarioDocx[] {
+  const lista = new Map([...comentarios.matchAll(/<w:comment\b([^>]*)>([\s\S]*?)<\/w:comment>/g)].map((m) => [m[1].match(/w:id="(\d+)"/)?.[1], { autor: dec(m[1].match(/w:author="([^"]*)"/)?.[1] ?? ""), texto: textos(m[2]).trim() }]));
+  const out: ComentarioDocx[] = [];
+  let capitulo = "";
+  for (const [p] of xml.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)) {
+    if (/<w:pStyle w:val="(?:Heading|Ttulo|Título|Title)\d?"/i.test(p)) { capitulo = textos(p).trim(); continue; }
+    for (const m of p.matchAll(/<w:commentRangeStart [^>]*w:id="(\d+)"[^>]*\/>/g)) {
+      const c = lista.get(m[1]);
+      if (!c) continue;
+      const resto = p.slice(m.index! + m[0].length), fin = resto.search(new RegExp(`<w:commentRangeEnd [^>]*w:id="${m[1]}"`));
+      out.push({ ...c, cita: textos(fin < 0 ? resto : resto.slice(0, fin)).trim(), capitulo });
+    }
+  }
+  return out;
 }
 
 const inline = (t: string) => esc(t).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>");
@@ -78,7 +119,8 @@ export function estructura(bloques: Bloque[], titulo: string): Est[] {
       (pila.length ? pila[pila.length - 1].hijos : raiz).push(e);
       pila.push(e);
       cap = tipo === "chapter" ? e : null;
-    } else capitulo().html += `<p>${inline(b.t)}</p>`;
+    } else if (/^(?:\*\s*){3}$/.test(b.t)) { const c = capitulo(); if (c.html) c.html += "<hr>"; }
+    else capitulo().html += `<p>${b.html ?? inline(b.t)}</p>`;
   }
   return raiz;
 }

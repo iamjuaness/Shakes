@@ -3,26 +3,32 @@
   "private": true,
   "license": "GPL-3.0-only",
   "author": "iamjuaness",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "plugins": "node scripts/build-plugins.mjs",
+    "test": "node scripts/test.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
+    "@fontsource/crimson-text": "^5.3.0",
+    "@fontsource/eb-garamond": "^5.3.0",
+    "@fontsource/libre-baskerville": "^5.3.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-fs": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-updater": "^2.14.1",
     "@tiptap/pm": "^3.34.0",
     "@tiptap/react": "^3.34.0",
     "@tiptap/starter-kit": "^3.34.0",
     "dictionary-en": "^4.0.0",
     "dictionary-es": "^4.0.0",
     "fflate": "^0.8.3",
+    "hyphen": "^1.14.1",
     "nspell": "^2.1.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
@@ -33,6 +39,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^31.0.1",
     "typescript": "~6.0.3",
     "vite": "^8.0.16"
   }

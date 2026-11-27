@@ -79,3 +79,7 @@ console.log("export ok");
   assert.ok((toEpubFiles(g)["OEBPS/s1.xhtml"] as string).includes('<p class="sp-character">ANA</p>'), "EPUB con clases de guion");
   console.log("guion export ok");
 }
+
+// las notas al margen (span data-nota) no son notas al pie
+assert.deepEqual(parseBlocks('<p><span data-nota="revisar" class="nota">texto</span></p>')[0].runs.map((r) => [r.t, r.nota]), [["texto", undefined]]);
+console.log("margen ok");

@@ -5,7 +5,7 @@ import { createProject, safeName } from "./newProject";
 import { newProject, templates } from "./tree";
 import { canPickDir, canSavePick, isAbort, pickProject, readHandle, saveProjectAs, writeProject } from "./fileio";
 import { getLang, t } from "./i18n";
-import { SPELL_LANGS, langName } from "./spell";
+import { SPELL_LANGS, langName } from "./lenguas";
 import { SettingsPanel } from "./SettingsPanel";
 import { getProjectsDir, setProjectsDir } from "./settings";
 import type { Update } from "./update";

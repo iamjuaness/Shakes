@@ -1,0 +1,9 @@
+{
+  "shakes": 1,
+  "id": "lectura-voz",
+  "name": "Lectura en voz alta",
+  "version": "1.0.0",
+  "description": "Escucha tu texto con las voces del sistema, frase a frase desde el cursor: la mejor forma de cazar errores.",
+  "tool": "lectura-voz",
+  "main": "main.js"
+}

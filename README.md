@@ -55,7 +55,12 @@ Tus datos son tuyos: archivos JSON abiertos, sin cuenta ni nube.</p>
 - Corcho, línea de tiempo narrativa y cronológica, estructuras clásicas, fichas del mundo con detección de apariciones y mapa de conexiones entre personajes.
 - Estadísticas, repeticiones y muletillas, búsqueda y reemplazo, versiones con comparación y restauración.
 
+**Edición**
+- Mesa de edición (informe, correcciones, gramática, punto de vista, voces, plan de pasadas) y lectura en voz alta.
+- Control de cambios con lo que devuelven tus lectores y comentarios sobre el texto.
+
 **Salida**
+- Maquetación completa de libros (notas al pie, imágenes, tablas, fuentes propias) y cubierta, con vista previa y PDF.
 - Word (`.docx`), EPUB, PDF, Markdown, LaTeX, HTML y Fountain; importación desde Word y Markdown.
 
 **Extensible**
@@ -149,7 +154,10 @@ npx tsc --noEmit
 | `src/plugins.ts` | Validación y aplicación de plugins |
 | `src/App.tsx` | Orquestación, editor, guardado |
 | `src/Views.tsx` | Corcho, línea de tiempo, mapa, estilo, búsqueda, versiones |
-| `src/export.ts` | DOCX / EPUB / PDF |
+| `src/export.ts` | DOCX / EPUB / HTML |
+| `src/maqueta/`, `src/Maqueta.tsx` | Composición en páginas, cubierta y PDF |
+| `src/revision.ts`, `src/guardado.ts`, `src/progreso.ts` | Control de cambios, guardado seguro y guía |
+| `scripts/test.mjs` | Todas las pruebas (`npm test`) |
 | `src/store.ts` | IndexedDB |
 | `src-tauri/` | Shell nativo (Rust) |
 

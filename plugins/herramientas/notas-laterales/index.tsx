@@ -1,3 +1,4 @@
+import { L } from "../_comun/idioma";
 import { useReducer } from "react";
 import type { ReactNode } from "react";
 import { elegir } from "../_comun/guardar";
@@ -13,7 +14,7 @@ async function abrir() {
   const w = window as any;
   if (w.showOpenFilePicker) { // con handle se puede recargar el archivo sin volver a elegirlo
     try {
-      const [h] = await w.showOpenFilePicker({ types: [{ description: "Notas", accept: { "text/plain": [".md", ".txt"] } }] });
+      const [h] = await w.showOpenFilePicker({ types: [{ description: L("Notas", "Notes"), accept: { "text/plain": [".md", ".txt"] } }] });
       S.handle = h; S.nombre = h.name; S.texto = await (await h.getFile()).text();
     } catch { return false; } // cancelado
   } else {
@@ -26,8 +27,8 @@ async function abrir() {
 }
 
 async function recargar(host: ToolHost) {
-  if (!S.handle) return host.notify("Reabre el archivo para actualizarlo");
-  try { S.texto = await (await S.handle.getFile()).text(); recordar(); } catch { host.notify("No se pudo leer el archivo"); }
+  if (!S.handle) return host.notify(L("Reabre el archivo para actualizarlo", "Reopen the file to refresh it"));
+  try { S.texto = await (await S.handle.getFile()).text(); recordar(); } catch { host.notify(L("No se pudo leer el archivo", "Could not read the file")); }
 }
 
 // Markdown mínimo a elementos React (sin innerHTML, sin dependencias): títulos, listas, tareas, citas, código, ---, **negrita**, *cursiva*, `código`, [enlaces](url).
@@ -82,19 +83,19 @@ function Overlay({ host }: { host: ToolHost }) {
   const [, force] = useReducer((x) => x + 1, 0);
   const cambia = (f: () => void | Promise<unknown>) => async () => { await f(); recordar(); force(); };
   if (!S.abierto) {
-    return <button className="notas-lat-tab" title="Mostrar notas de la historia" onClick={cambia(() => { S.abierto = true; })}>📝 Notas</button>;
+    return <button className="notas-lat-tab" title={L("Mostrar notas de la historia", "Show story notes")} onClick={cambia(() => { S.abierto = true; })}>📝 {L("Notas", "Notes")}</button>;
   }
   return (
-    <aside className="fa-panel notas-lat" aria-label="Notas de la historia" style={{ width: 340 }}>
+    <aside className="fa-panel notas-lat" aria-label={L("Notas de la historia", "Story notes")} style={{ width: 340 }}>
       <div className="notas-lat-head">
-        <b title={S.nombre}>{S.nombre || "Notas de la historia"}</b>
-        <button onClick={cambia(abrir)}>{S.nombre ? "Cambiar" : "Abrir .md / .txt"}</button>
-        {S.nombre && <button title="Volver a leer el archivo" onClick={cambia(() => recargar(host))}>↻</button>}
-        <button title="Ocultar" onClick={cambia(() => { S.abierto = false; })}>✕</button>
+        <b title={S.nombre}>{S.nombre || L("Notas de la historia", "Story notes")}</b>
+        <button onClick={cambia(abrir)}>{S.nombre ? L("Cambiar", "Change") : L("Abrir .md / .txt", "Open .md / .txt")}</button>
+        {S.nombre && <button title={L("Volver a leer el archivo", "Read the file again")} onClick={cambia(() => recargar(host))}>↻</button>}
+        <button title={L("Ocultar", "Hide")} onClick={cambia(() => { S.abierto = false; })}>✕</button>
       </div>
       {S.texto
         ? <div className="notas-lat-texto" tabIndex={0}>{/\.txt$/i.test(S.nombre) ? S.texto : md(S.texto)}</div>
-        : <p className="muted">Abre un archivo con tus notas previas para verlo junto al texto.</p>}
+        : <p className="muted">{L("Abre un archivo con tus notas previas para verlo junto al texto.", "Open a file with your earlier notes to see it next to the text.")}</p>}
     </aside>
   );
 }

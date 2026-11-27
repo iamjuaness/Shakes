@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import Root from "./Root";
+import "./App.css";
 import { idbGet } from "./store";
 import { normalize } from "./tree";
 import { loadSettings } from "./settings";

@@ -1,3 +1,4 @@
+import { L } from "../_comun/idioma";
 import { useEffect, useReducer, useState } from "react";
 import { Mark } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
@@ -49,18 +50,18 @@ function Overlay({ editor }: { editor: Editor }) {
       {sel && (
         <button className="nota-btn" style={{ left: sel.x, top: sel.y }} onMouseDown={async (e) => {
           e.preventDefault();
-          const text = await ask("Nota al margen");
+          const text = await ask(L("Nota al margen", "Margin note"));
           if (text) editor.chain().focus().setMark("nota", { text }).run();
-        }}>＋ Nota</button>
+        }}>＋ {L("Nota", "Note")}</button>
       )}
       {list.length > 0 && (
-        <aside className="fa-panel" aria-label="Notas al margen">
-          <b>Notas</b>
+        <aside className="fa-panel" aria-label={L("Notas al margen", "Margin notes")}>
+          <b>{L("Notas", "Notes")}</b>
           {list.map((n, i) => (
             <div key={i} className="nota-item">
               <span className="muted">«{n.quote.slice(0, 40)}»</span>
               <span>{n.text}</span>
-              <button onClick={() => editor.chain().focus().setTextSelection({ from: n.from, to: n.to }).unsetMark("nota").run()}>Quitar</button>
+              <button onClick={() => editor.chain().focus().setTextSelection({ from: n.from, to: n.to }).unsetMark("nota").run()}>{L("Quitar", "Remove")}</button>
             </div>
           ))}
         </aside>

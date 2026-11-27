@@ -126,8 +126,17 @@ export function move(root: Node, id: string, targetId: string): Node {
   return root;
 }
 
+// Notas al pie (texto cifrado en el atributo), imágenes y tablas, en Markdown.
+export const NOTA = /<span\b[^>]*data-pie="([^"]*)"[^>]*>(?:<\/span>)?/g;
+export const textoNota = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
 export function htmlToMd(html = ""): string {
   return html
+    .replace(NOTA, (_, n) => `^[${textoNota(n).replace(/[<>]/g, "")}]`)
+    .replace(/<img\b[^>]*>/gi, (m) => `*[${m.match(/alt="([^"]*)"/)?.[1] || "imagen"}]*\n\n`)
+    .replace(/<table\b[^>]*>([\s\S]*?)<\/table>/gi, (_, t: string) => [...t.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((f, i) => {
+      const celdas = [...f[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((c) => c[1].replace(/<\/p>\s*<p[^>]*>/gi, " ").replace(/<\/?p[^>]*>/gi, "").replace(/\|/g, "\\|"));
+      return `| ${celdas.join(" | ")} |` + (i ? "" : `\n|${" --- |".repeat(celdas.length)}`);
+    }).join("\n") + "\n\n")
     .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gis, (_, l, t) => `${"#".repeat(Math.min(6, +l + 4))} ${t}\n\n`)
     .replace(/<\/?(strong|b)>/gi, "**")
     .replace(/<\/?(em|i)>/gi, "*")

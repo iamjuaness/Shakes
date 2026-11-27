@@ -1,6 +1,7 @@
 // Extensión TipTap que subraya tramos de texto calculados por una función pura (linter, repeticiones...).
 // Si un tramo trae `sug` (sustitutos), al hacer clic en él se abre un menú: elegir uno reemplaza el tramo.
 // Un sustituto vacío ("") significa quitar el tramo (con su coma/espacio sobrante).
+import { L } from "../_comun/idioma.ts";
 import { Extension } from "@tiptap/react";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
@@ -57,7 +58,7 @@ async function menu(view: EditorView, d: Decoration, key: PluginKey) {
     const b = document.createElement("button");
     b.type = "button";
     b.setAttribute("role", "menuitem");
-    b.textContent = s || "Quitar";
+    b.textContent = s || L("Quitar", "Remove");
     if (!s) b.className = "quitar";
     b.onclick = () => { cerrar(); reemplazar(view, d.from, d.to, s); };
     el.appendChild(b);
@@ -74,10 +75,10 @@ async function menu(view: EditorView, d: Decoration, key: PluginKey) {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "quitar";
-    b.textContent = "＋ Añadir sinónimos…";
+    b.textContent = L("＋ Añadir sinónimos…", "＋ Add synonyms…");
     b.onclick = async () => {
       cerrar();
-      const t = await ask(`Sinónimos de «${learn}» (separados por coma; vacío = borrar los tuyos)`, propiosDe(learn).join(", "));
+      const t = await ask(L(`Sinónimos de «${learn}» (separados por coma; vacío = borrar los tuyos)`, `Synonyms of “${learn}” (comma separated; empty = delete yours)`), propiosDe(learn).join(", "));
       if (t === null || t === undefined) return;
       aprender(learn, t.split(","));
       view.dispatch(view.state.tr.setMeta(key, true)); // recalcula los subrayados

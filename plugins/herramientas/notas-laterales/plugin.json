@@ -2,7 +2,7 @@
   "shakes": 1,
   "id": "notas-laterales",
   "name": "Notas laterales",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Abre un .md o .txt con tus notas previas en un panel a la derecha mientras escribes.",
   "tool": "notas-laterales",
   "main": "main.js"

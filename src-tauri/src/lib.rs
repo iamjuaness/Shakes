@@ -8,6 +8,13 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         // Recuerda entre sesiones las carpetas y archivos que el usuario eligió (proyectos recientes).
         .plugin(tauri_plugin_persisted_scope::init())
+        // Actualizador firmado: solo se activa en compilaciones que traen su configuración (tauri.updater.conf.json).
+        .setup(|app| {
+            if app.config().plugins.0.contains_key("updater") {
+                app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

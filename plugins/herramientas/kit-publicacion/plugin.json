@@ -1,0 +1,9 @@
+{
+  "shakes": 1,
+  "id": "kit-publicacion",
+  "name": "Kit de publicación",
+  "version": "1.0.0",
+  "description": "Logline, sinopsis, contraportada, palabras clave, carta a editoriales y lista de tareas antes de publicar.",
+  "tool": "kit-publicacion",
+  "main": "main.js"
+}

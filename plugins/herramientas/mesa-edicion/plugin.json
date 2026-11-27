@@ -1,0 +1,9 @@
+{
+  "shakes": 1,
+  "id": "mesa-edicion",
+  "name": "Mesa de edición",
+  "version": "1.1.0",
+  "description": "Edita tu libro como un editor: informe por capítulo, correcciones de todo el texto (ortotipografía, gramática, estilo, narrativa) y plan de pasadas.",
+  "tool": "mesa-edicion",
+  "main": "main.js"
+}

@@ -8,7 +8,11 @@ import { inconsistencias } from "./inconsistencias/reglas.ts";
 import { PASO, colocar, familia } from "./arbol-genealogico/familia.ts";
 import { docxBloques, estructura, mdBloques } from "../../src/importar.ts";
 import { toFountain, toLatex } from "../../src/formatos.ts";
-import { editorial } from "./manuscrito-editorial/editorial.ts";
+import { aplicar, bloques, corregirSeguras, informe, revisarLibro } from "./mesa-edicion/analisis.ts";
+import { frases } from "./lectura-voz/frases.ts";
+import { carta, dossierMd } from "./kit-publicacion/dossier.ts";
+import { revisarEscena, separar, voces } from "./mesa-edicion/narracion.ts";
+import { esLocal, repartir } from "./mesa-edicion/languagetool.ts";
 import { generar } from "./_comun/nombres.ts";
 import { cardToMd, nombreArchivo } from "./obsidian-sync/obsidian.ts";
 import { resumir } from "./resumen-escenas/resumen.ts";
@@ -118,14 +122,12 @@ const tres = estructura(mdBloques("# L1\n## C1\n### E1\ntexto\n### E2\notro\n## 
 assert.deepEqual(tres.map((p) => [p.tipo, p.hijos.map((c) => c.html.split("<hr>").length)]), [["part", [2, 1]], ["part", [1]]]);
 const kw = estructura(mdBloques("# Capítulo 1\n\n## Escena 1\nhola\n# Capítulo 2\ntexto suelto"), "x");
 assert.deepEqual(kw.map((c) => [c.tipo, c.html]), [["chapter", "<p>hola</p>"], ["chapter", "<p>texto suelto</p>"]], "«Escena 1» al empezar el capítulo no deja separador");
-assert.deepEqual(docxBloques('<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Cap &amp; 1</w:t></w:r></w:p><w:p><w:r><w:t>Hola</w:t></w:r><w:r><w:t> mundo</w:t></w:r></w:p>'), [{ h: true, n: 1, t: "Cap & 1" }, { h: false, t: "Hola mundo" }]);
+assert.deepEqual(docxBloques('<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Cap &amp; 1</w:t></w:r></w:p><w:p><w:r><w:t>Hola</w:t></w:r><w:r><w:t> mundo</w:t></w:r></w:p>'), [{ h: true, n: 1, t: "Cap & 1" }, { h: false, t: "Hola mundo", html: "Hola mundo" }]);
 
 // formatos
 const book: any = { id: "b", kind: "book", title: "Mi_libro & Co", children: [{ id: "p", kind: "part", title: "P1", children: [{ id: "c", kind: "chapter", title: "C1", content: "<p>Hola 50% listo.</p><hr><p>Luego.</p>", children: [] }] }] };
 assert.ok(toFountain(book).includes("## C1") && toFountain(book).includes("==="), "capítulo con su texto y salto de escena");
 assert.ok(toLatex(book).includes(String.raw`50\% listo`) && toLatex(book).includes(String.raw`Mi\_libro \& Co`));
-const ed = editorial(book, "Ana Pérez");
-assert.ok(ed.includes("Pérez / MI_LIBRO") && ed.includes("aprox. 100 palabras"));
 
 // nombres
 const n = generar("vikinga", 5);
@@ -436,4 +438,79 @@ import { sinonimos } from "./_comun/sinonimos.ts";
   const idea = m.idea({ ...s, coste: "mío" }, true, () => 0);
   assert.ok(!("coste" in idea) && idea.fuente, "la idea al azar no pisa lo escrito");
   console.log("idiomas y magia ok");
+}
+
+// mesa de edición, lectura en voz alta y kit de publicación
+{
+  const html = '<p>Dijo <strong>hola</strong> &amp; "adiós"...</p><ul><li><p>uno</p></li></ul><p>a<br>b</p>';
+  assert.deepEqual(bloques(html).map((b) => b.texto), ['Dijo hola & "adiós"...', "uno", "a\nb"]);
+  assert.equal(aplicar(html, 0, 5, 9, "chao"), html.replace("hola", "chao"), "conserva el formato");
+  assert.equal(aplicar("<p>ab <em>cd</em> ef</p>", 0, 1, 7, "X"), "<p>aX<em></em>f</p>", "tramo que cruza marcas");
+  assert.equal(aplicar("<p>a &lt; b</p>", 0, 0, 1, "<c>"), "<p>&lt;c&gt; &lt; b</p>", "se escapa lo que entra");
+
+  const sucio = '<p>- Hola. —Dijo Ana,mirando "la casa".</p><p>Habían muchos perros...</p>';
+  const r = corregirSeguras(sucio);
+  assert.equal(r.html, "<p>—Hola —dijo Ana, mirando «la casa».</p><p>Habían muchos perros…</p>", "solo lo seguro; la gramática se decide a mano");
+  assert.ok(r.n >= 5);
+  assert.equal(corregirSeguras(r.html).n, 0, "estable");
+  assert.equal(corregirSeguras("<p>—No sé —dijo—. Ya veremos.</p><p>El 3,5 y la web a.b.com</p>").n, 0, "no toca lo correcto");
+
+  const libro: any = { id: "l", kind: "book", title: "L", children: [{ id: "c1", kind: "chapter", title: "Uno", content: sucio + "<p>Ana estaba triste y vio que llovía, logrando mojarse. —¡Fuera! —espetó.</p>", children: [] }, { id: "c2", kind: "chapter", title: "Dos", content: "", children: [] }] };
+  const hs = revisarLibro(libro);
+  for (const x of ["habian", "emocion", "filtro", "gerundio", "acotacion-recargada", "raya-inicio"]) assert.ok(hs.some((h) => h.regla === x), x);
+  const g = hs.find((h) => h.regla === "habian")!;
+  assert.ok(aplicar(libro.children[0].content, g.bloque, g.from, g.to, g.sug[0]).includes("Había muchos"));
+  assert.ok(!revisarLibro(libro, "es", [g.id]).some((h) => h.id === g.id), "ignorados");
+  assert.ok(revisarLibro(libro, "en").every((h) => !["habian", "filtro", "concordancia", "comillas"].includes(h.regla)), "en inglés, sin reglas de español");
+  const inf = informe(libro, hs);
+  assert.ok(inf[0].palabras > 10 && inf[0].dialogo > 0 && inf[1].avisos.includes("Vacío."));
+
+  assert.deepEqual(frases("Hola. ¿Qué tal? …").map((f) => f.t), ["Hola.", "¿Qué tal?"]);
+  assert.ok(carta({ genero: "thriller" }, "Ruido", "Ana", 81234).includes("81.000 palabras"));
+  assert.ok(dossierMd({ logline: "Una frase." }, "Ruido", "Ana").includes("## Logline"));
+  console.log("edición ok");
+}
+
+// gramática, punto de vista, tiempo verbal, voces, otros idiomas y LanguageTool
+{
+  const de = (texto: string, lang = "es") => revisarLibro({ id: "x", kind: "chapter", title: "", content: `<p>${texto}</p>`, children: [] }, lang);
+  const reglas = (t: string, l?: string) => de(t, l).map((h) => h.regla);
+  for (const mal of ["Vimos los casa vieja.", "Compró un casa.", "Tenía una perro.", "Miró este ventanas."]) assert.ok(reglas(mal).some((r) => r.startsWith("concordancia")) || mal.startsWith("Vimos"), mal);
+  assert.ok(reglas("Hablaban de los casas.").includes("concordancia-prep"));
+  for (const bien of ["El agua fría del río.", "Un día en el mapa de la ciudad.", "La mano, la foto y un artista.", "Este sistema de la canción y las ciudades.", "La miraba y los tomaba de la mano.", "Un poco de la otra parte, con la mañana.", "Una vez, al final del camino, en esta casa."]) assert.deepEqual(reglas(bien).filter((r) => r.startsWith("concordancia")), [], bien);
+  assert.ok(reglas("Ellos tiene miedo.").includes("sujeto-verbo"));
+  assert.equal(de("Ellos tiene miedo.").find((h) => h.regla === "sujeto-verbo")!.sug[0], "Ellos tienen");
+  const orto = de("Si tu quieres, es para mi. Claro que si. ¿Que haces? No se.");
+  for (const r of ["tu-tilde", "mi-tilde", "si-tilde", "interrogativo", "se-tilde"]) assert.ok(orto.some((h) => h.regla === r), r);
+  assert.equal(orto.find((h) => h.regla === "interrogativo")!.sug[0], "Qué");
+  assert.equal(corregirSeguras("<p>Es para mi.</p><p>Si tu quieres.</p>").html, "<p>Es para mí.</p><p>Si tú quieres.</p>");
+  assert.deepEqual(de("Ayer le vi en la plaza.").find((h) => h.regla === "leismo")!.sug, ["lo vi", "la vi"]);
+  assert.ok(!reglas("Le vio la cara.").includes("leismo"));
+  assert.ok(reglas("La dije que no.").includes("laismo"));
+
+  assert.deepEqual(separar("—Hola —dijo Ana—. Adiós.").dialogo.trim().replace(/\s+/g, " "), "Hola . Adiós.");
+  const escena = (ps: string[], nombres: string[][] = []) => revisarEscena(ps.map((texto, bloque) => ({ texto, bloque })), "es", nombres).map((a) => a.regla);
+  const base = ["Ella entró y miró la sala. Estaba vacía, como siempre había estado.", "Su hermano llegó tarde y dejó sus cosas. Ellos se sentaron y hablaron."];
+  assert.deepEqual(escena(base), []);
+  assert.ok(escena([...base, "Nadie dice nada y todos miran el reloj."]).includes("tiempo"));
+  assert.ok(escena([...base, "Yo me levanté y recogí mis llaves."]).includes("narrador"));
+  assert.deepEqual(escena([...base, "—Yo me voy, es mi turno —dijo."]), [], "el diálogo no cuenta");
+  assert.ok(escena(["Ana pensó en su madre.", "Luis recordó aquel verano."], [["Ana"], ["Luis"]]).includes("cabeza"));
+  assert.deepEqual(escena(["Ana pensó en su madre.", "Ana recordó aquel verano."], [["Ana"], ["Luis"]]), []);
+  const porEscenas = revisarLibro({ id: "x", kind: "chapter", title: "", content: "<p>Ana pensó en ella.</p><hr><p>Luis recordó algo.</p>", children: [] }, "es", [], [["Ana"], ["Luis"]]);
+  assert.ok(!porEscenas.some((h) => h.regla === "cabeza"), "cambiar de escena permite cambiar de personaje");
+
+  const v = voces(["—¿Vienes? —preguntó Ana.", "—No puedo, de verdad que no puedo —dijo Luis.", "—¡Anda! —insistió Ana.", "—Nada.", "No hay diálogo."], [["Ana"], ["Luis"]]);
+  assert.deepEqual(v.voces.map((x) => [x.nombre, x.intervenciones]), [["Luis", 1], ["Ana", 2]]);
+  assert.equal(v.sinAtribuir, 1);
+  assert.equal(v.voces[1].preguntas, 50);
+
+  for (const [mal, regla] of [["I could of done it.", "en-of"], ["It was more then enough.", "en-than"], ["She saw a owl.", "en-an"], ["The the end.", "palabra-doble"], ["He walked really slowly.", "en-flojas"]]) assert.ok(reglas(mal, "en").includes(regla), mal);
+  assert.ok(!reglas("A university and a one-off.", "en").includes("en-an"));
+  assert.ok(reglas("Le chat chat dort.", "fr").includes("palabra-doble") && !reglas("Quoi ? Rien !", "fr").includes("espacio-signo"));
+  assert.ok(reglas("Er kam , sah und ging.", "de").includes("espacio-signo"));
+
+  assert.ok(esLocal("http://localhost:8081") && esLocal("http://127.0.0.1:8010/") && !esLocal("https://api.languagetool.org") && !esLocal("http://localhost.evil.com") && !esLocal("x"));
+  assert.deepEqual(repartir(["Hola mundo.", "Yo ha ido."], [{ offset: 16, length: 2, message: "m", rule: { id: "R" }, replacements: [{ value: "he" }] }]), [{ bloque: 1, from: 3, to: 5, regla: "lt-R", msg: "m", sug: ["he"] }]);
+  console.log("edición avanzada ok");
 }

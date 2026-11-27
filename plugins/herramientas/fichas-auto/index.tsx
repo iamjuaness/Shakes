@@ -1,3 +1,4 @@
+import { L } from "../_comun/idioma";
 import { useEffect, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { CARD_TYPES } from "../../../src/tree";
@@ -21,7 +22,7 @@ function Overlay({ editor, host }: { editor: Editor; host: ToolHost }) {
   useEffect(() => {
     const off = [
       on<SuggestState | null>("suggest", setSug),
-      on<Candidate>("new", (c) => { setCand({ ...c, notes: `Aparece en: «…${c.context}…»` }); setType(c.type); }),
+      on<Candidate>("new", (c) => { setCand({ ...c, notes: L(`Aparece en: «…${c.context}…»`, `Appears in: “…${c.context}…”`) }); setType(c.type); }),
       on<string>("open", setOpenId),
     ];
     return () => off.forEach((f) => f());
@@ -32,33 +33,33 @@ function Overlay({ editor, host }: { editor: Editor; host: ToolHost }) {
   return (
     <>
       {sug && (
-        <ul className="fa-suggest" style={{ left: sug.x, top: sug.y }} role="listbox" aria-label="Fichas parecidas">
+        <ul className="fa-suggest" style={{ left: sug.x, top: sug.y }} role="listbox" aria-label={L("Fichas parecidas", "Similar cards")}>
           {sug.items.map((c, i) => (
             <li key={c.id} role="option" aria-selected={i === sug.i} className={i === sug.i ? "on" : ""}
               onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().insertContentAt({ from: sug.from, to: sug.to }, c.name).run(); }}>
               {c.name}<span className="muted">{c.type}</span>
             </li>
           ))}
-          <li className="hint muted">Tab completa · Esc cierra</li>
+          <li className="hint muted">{L("Tab completa · Esc cierra", "Tab completes · Esc closes")}</li>
         </ul>
       )}
       {/* Aviso discreto, sin robar el teclado: antes era una ventana modal que se quedaba con el Intro a mitad de frase. */}
       {cand && (
         <div className="fa-toast" role="status" onMouseDown={(e) => e.preventDefault()}>
-          <span>¿Ficha para «<b>{cand.name}</b>»?</span>
-          <select aria-label="Tipo" value={type} onMouseDown={(e) => e.stopPropagation()} onChange={(e) => setType(e.target.value as CardType)}>{TYPES.map((k) => <option key={k} value={k}>{host.t(`type.${k}`)}</option>)}</select>
-          <button className="on" onClick={() => { host.addCard({ id: crypto.randomUUID(), type, name: cand.name, notes: cand.notes }); close(); }}>Crear</button>
-          <button aria-label="Ahora no" onClick={close}>×</button>
+          <span>{L("¿Ficha para", "Card for")} «<b>{cand.name}</b>»?</span>
+          <select aria-label={L("Tipo", "Type")} value={type} onMouseDown={(e) => e.stopPropagation()} onChange={(e) => setType(e.target.value as CardType)}>{TYPES.map((k) => <option key={k} value={k}>{host.t(`type.${k}`)}</option>)}</select>
+          <button className="on" onClick={() => { host.addCard({ id: crypto.randomUUID(), type, name: cand.name, notes: cand.notes }); close(); }}>{L("Crear", "Create")}</button>
+          <button aria-label={L("Ahora no", "Not now")} onClick={close}>×</button>
         </div>
       )}
       {card && (
-        <aside className="fa-panel" aria-label={`Ficha de ${card.name}`}>
-          <div className="row"><b style={{ flex: 1 }}>Ficha</b><button aria-label="Cerrar ficha" onClick={() => setOpenId(null)}>×</button></div>
-          <input aria-label="Nombre" value={card.name} onChange={(e) => host.patchCard(card.id, { name: e.target.value })} />
-          <select aria-label="Tipo" value={card.type} onChange={(e) => host.patchCard(card.id, { type: e.target.value as CardType })}>{TYPES.map((k) => <option key={k} value={k}>{host.t(`type.${k}`)}</option>)}</select>
-          <textarea aria-label="Notas" value={card.notes} onChange={(e) => host.patchCard(card.id, { notes: e.target.value })} />
-          {(card.links ?? []).map((l, i) => <span key={i} className="muted">{l.label} → {host.cards.find((c: Card) => c.id === l.to)?.name ?? "(borrada)"}</span>)}
-          <button onClick={() => host.openCard(card.id)}>Abrir ficha completa</button>
+        <aside className="fa-panel" aria-label={L(`Ficha de ${card.name}`, `Card of ${card.name}`)}>
+          <div className="row"><b style={{ flex: 1 }}>{L("Ficha", "Card")}</b><button aria-label={L("Cerrar ficha", "Close card")} onClick={() => setOpenId(null)}>×</button></div>
+          <input aria-label={L("Nombre", "Name")} value={card.name} onChange={(e) => host.patchCard(card.id, { name: e.target.value })} />
+          <select aria-label={L("Tipo", "Type")} value={card.type} onChange={(e) => host.patchCard(card.id, { type: e.target.value as CardType })}>{TYPES.map((k) => <option key={k} value={k}>{host.t(`type.${k}`)}</option>)}</select>
+          <textarea aria-label={L("Notas", "Notes")} value={card.notes} onChange={(e) => host.patchCard(card.id, { notes: e.target.value })} />
+          {(card.links ?? []).map((l, i) => <span key={i} className="muted">{l.label} → {host.cards.find((c: Card) => c.id === l.to)?.name ?? L("(borrada)", "(deleted)")}</span>)}
+          <button onClick={() => host.openCard(card.id)}>{L("Abrir ficha completa", "Open full card")}</button>
         </aside>
       )}
     </>

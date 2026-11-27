@@ -3,7 +3,30 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Cada release de GitHub usa la sección de su versión.
 
 ## [Sin publicar]
+
+## [1.0.0] - 2026-11-27
 ### Añadido
+- Pestaña **Cambios**: revisa cambio a cambio lo que envía un lector (`.shks`, `.docx`, `.md`) o lo que cambió desde una versión; comentarios sobre el texto, incluidos los de Word.
+- **Mesa de edición**: concordancia, tildes diacríticas, leísmo y laísmo; saltos de punto de vista y de tiempo; voz de cada personaje; reglas para inglés; conexión con LanguageTool instalado en tu equipo.
+- **Notas al pie, imágenes y tablas** en el texto, en el PDF, Word y EPUB.
+- Maquetar: **cubierta completa** con lomo calculado, **fuentes propias** (`.ttf`), interletraje, ligaduras, guiones en más idiomas, griego y cirílico.
+- Word y EPUB llevan los mismos preliminares que el PDF.
+- Cuatro modos (**Planificar, Escribir, Editar, Publicar**), pestaña **Guía** y recorrido de la primera vez.
+- **Vista continua** de capítulos y **editor dividido**.
+- **Copias diarias** en una carpeta aparte y aviso si el archivo cambió en otro equipo (no se pisa).
+- Paneles de los plugins en inglés.
+- Actualizador firmado: las versiones nuevas se instalan desde la app. Desde la 0.9.0 o anterior hay que actualizar a mano una última vez.
+- Pruebas de interfaz; `npm test` ejecuta todas.
+- Pestaña **Maquetar**: el libro compuesto en páginas con vista previa. Formatos (5 × 8", 5,5 × 8,5", 6 × 9", bolsillo, A5 y manuscrito editorial), márgenes enfrentados, tres tipografías libres incrustadas, justificado con guiones en español, viudas y huérfanas, capitulares, cabeceras y folios, anteportada, portada, créditos, dedicatoria, epígrafe, índice, agradecimientos y biografía. Avisa de problemas de imprenta y calcula el lomo.
+- Plugin **Mesa de edición**: informe por capítulo, correcciones de todo el libro (ortotipografía, gramática, estilo, narrativa y repeticiones), correcciones seguras en bloque con copia previa y plan de seis pasadas.
+- Plugin **Lectura en voz alta** desde el cursor.
+- Plugin **Kit de publicación**: logline, sinopsis, contraportada, carta a editoriales y lista de tareas.
+- Paleta de acciones (**Ctrl+K**) para ir a cualquier pestaña, capítulo, ficha o acción.
+### Corregido
+- El PDF ya no incluye fecha, título ni dirección del navegador: lo genera Shakes y se guarda directamente.
+- El EPUB lleva el idioma de la obra, hoja de estilo y un archivo por capítulo.
+### Eliminado
+- Plugin «Manuscrito para editoriales»: ahora es un formato de la pestaña Maquetar.
 - Plugin **Creador de idiomas**: un idioma completo a partir del idioma del libro (una palabra para cada palabra de su diccionario), sonidos y estilos de partida, gramática con plurales, tiempos y personas, traductor que conjuga y reordena (español e inglés), letras propias dibujables, dialectos por cambios de sonido y cultura.
 - Plugin **Sistemas de magia**: modo sencillo y complejo, escala de magia blanda a dura, reglas, escuelas, hechizos, rangos, personajes usuarios, avisos de coherencia e ideas al azar.
 ### Cambiado

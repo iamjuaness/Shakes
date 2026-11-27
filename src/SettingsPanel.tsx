@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { t } from "./i18n";
 import type { Lang } from "./i18n";
-import { getProjectsDir, saveSettings, setProjectsDir, useSettings } from "./settings";
+import { getBackupDir, getProjectsDir, saveSettings, setBackupDir, setProjectsDir, useSettings } from "./settings";
 import { Update, checkUpdate, openUpdate } from "./update";
+import { confirmAsk } from "./dialog";
 import changelog from "../CHANGELOG.md?raw";
 import { version } from "../package.json";
 
 const w = window as any;
 export const APP_VERSION: string = version;
+const actualizar = (u: Update) => openUpdate(u, () => confirmAsk(t("up.confirm", { v: u.version })));
 
 // Aviso de versión nueva: se muestra arriba en todas las pantallas. «Actualizar» descarga el instalador de la release.
 export function UpdateBar({ update, onHide, onNotes }: { update: Update; onHide: () => void; onNotes: () => void }) {
@@ -15,7 +17,7 @@ export function UpdateBar({ update, onHide, onNotes }: { update: Update; onHide:
     <div className="updatebar" role="status">
       <span>{t("up.available", { v: update.version, cur: APP_VERSION })} <span className="muted">{t("up.hint")}</span></span>
       <span className="spacer" />
-      <button className="on" onClick={() => openUpdate(update)}>{update.asset ? t("up.update") : t("up.noAsset")}</button>
+      <button className="on" onClick={() => actualizar(update)}>{update.asset ? t("up.update") : t("up.noAsset")}</button>
       <button onClick={onNotes}>{t("up.notes")}</button>
       <button onClick={onHide}>{t("up.later")}</button>
     </div>
@@ -27,6 +29,11 @@ export function SettingsPanel({ update, onUpdate }: { update: Update | null; onU
   const [dir, setDir] = useState<any>(null);
   const [msg, setMsg] = useState("");
   useEffect(() => { getProjectsDir().then((d) => setDir(d ?? null)); }, []);
+  const [copias, setCopias] = useState<any>(null);
+  useEffect(() => { getBackupDir().then((d) => setCopias(d ?? null)); }, []);
+  async function pickCopias() {
+    try { const d = await w.showDirectoryPicker({ mode: "readwrite", startIn: copias ?? "documents" }); await setBackupDir(d); setCopias(d); } catch { /* cancelado */ }
+  }
 
   async function pick() {
     try { const d = await w.showDirectoryPicker({ mode: "readwrite", startIn: dir ?? "documents" }); await setProjectsDir(d); setDir(d); } catch { /* cancelado */ }
@@ -84,13 +91,24 @@ export function SettingsPanel({ update, onUpdate }: { update: Update | null; onU
         </select>
       </label>
       <p className="muted">{t("set.copy.hint")}</p>
+      <div className="srow">
+        <span>{t("set.backup")}</span>
+        <span className="row">
+          <strong>{copias ? copias.name : t("set.backup.none")}</strong>
+          {w.showDirectoryPicker ? <>
+            <button onClick={pickCopias}>{t("set.dir.pick")}</button>
+            {copias && <button onClick={() => setBackupDir(null).then(() => setCopias(null))}>{t("set.dir.clear")}</button>}
+          </> : <span className="muted">{t("set.dir.unsupported")}</span>}
+        </span>
+      </div>
+      <p className="muted">{t("set.backup.hint")}</p>
 
       <h3>{t("set.updates")}</h3>
       <label className="check"><input type="checkbox" checked={s.checkUpdates} onChange={(e) => saveSettings({ checkUpdates: e.target.checked })} /> {t("set.checkStart")}</label>
       <div className="row">
         <span>{t("set.version", { v: APP_VERSION })}</span>
         <button onClick={check}>{t("set.checkNow")}</button>
-        {update && <button className="on" onClick={() => openUpdate(update)}>{t("up.update")} {update.version}</button>}
+        {update && <button className="on" onClick={() => actualizar(update)}>{t("up.update")} {update.version}</button>}
       </div>
       {msg && <p className="muted">{msg}</p>}
 

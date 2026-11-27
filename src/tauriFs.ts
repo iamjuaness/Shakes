@@ -4,7 +4,7 @@
 // Welcome y los plugins funcionan igual en el navegador y en escritorio. Los handles se guardan en IndexedDB como
 // datos ({__tauri, path}) y `revivir` los reconstruye al leerlos.
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { exists, mkdir, readDir, readFile, readTextFile, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { exists, mkdir, readDir, readFile, readTextFile, stat, writeFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
 export const enTauri = () => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const nombre = (p: string) => p.split(/[\\/]/).pop() ?? p;
@@ -20,7 +20,8 @@ class ArchivoNativo {
   constructor(path: string) { this.path = path; this.name = nombre(path); }
   async getFile() {
     const p = this.path, name = this.name;
-    return { name, text: () => readTextFile(p), arrayBuffer: async () => (await readFile(p)).buffer };
+    const lastModified = await stat(p).then((i) => i.mtime?.getTime(), () => undefined); // para detectar cambios externos
+    return { name, lastModified, text: () => readTextFile(p), arrayBuffer: async () => (await readFile(p)).buffer };
   }
   // Acumula lo escrito y lo vuelca al cerrar (texto o bytes, como un FileSystemWritableFileStream).
   async createWritable() {

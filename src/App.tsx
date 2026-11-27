@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { EditorContent, Extension, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { CARD_TYPES, Card, Formato, Node, Project, templates, addChild, books, conTexto, formatoDe, esContenedor, esObra, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, remove, replaceAll, restore, search, shift, snapshot, today, totalWords, update, wrapIn, writtenOn } from "./tree";
+import { CARD_TYPES, FORMATOS, Card, Formato, Node, Project, templates, addChild, books, conTexto, formatoDe, esContenedor, esObra, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, remove, replaceAll, restore, scenes, search, shift, snapshot, today, totalWords, update, wrapIn, writtenOn } from "./tree";
 import { Analysis, CardForm, Corkboard, RelationMap, SearchPanel, Timeline, Versions } from "./Views";
 import Tree from "./TreeView";
 import { BookMeta } from "./BookMeta";
@@ -10,11 +10,21 @@ import { idbGet, idbSet, recentAdd } from "./store";
 import { PluginState, activeTheme, allSceneTemplates, allStructures, install, themeCss } from "./plugins";
 import { PluginsPanel } from "./PluginsPanel";
 import { SettingsPanel } from "./SettingsPanel";
-import { isDark, saveSettings, useSettings } from "./settings";
+import { getBackupDir, isDark, saveSettings, useSettings } from "./settings";
 import { Ribbon } from "./Ribbon";
+import type { Vista } from "./Ribbon";
+import { Continua, Partida } from "./VistasEscritura";
+import { Guia, Recorrido } from "./Guia";
+import { modoDe } from "./progreso";
 import { ToolBar } from "./ToolBar";
-import { canSavePick, pickProject, saveProjectAs, writeProject } from "./fileio";
+import { canSavePick, pickProject, readHandle, saveProjectAs } from "./fileio";
+import { copiaEn, guardador } from "./guardado";
+import type { Guardador } from "./guardado";
 import { ExportKind, exportAs } from "./exporting";
+import { Paleta } from "./Paleta";
+import { EXTRAS, comentariosEnTexto, comentarSeleccion, filaTabla, insertarImagen, insertarNota, insertarTabla } from "./editorExtra";
+import { RevisionPanel } from "./PanelRevision";
+import type { Comentario } from "./revision";
 import { importDoc } from "./importing";
 import { compareVersions, type Update } from "./update";
 import { Key, t, tr } from "./i18n";
@@ -22,10 +32,12 @@ import { SPELL_LANGS, langName, ortografia } from "./spell";
 import { ESSENTIAL, ESSENTIAL_NEW, RETIRED, TOOLS, catalog } from "../plugins/index";
 import type { ToolHost, ToolPlugin } from "./pluginApi";
 import { loadTool } from "./extTools";
-import "./App.css";
+
+// La maquetación (composición, fuentes y PDF) se carga al abrir su pestaña.
+const MaquetaPanel = lazy(() => import("./Maqueta").then((m) => ({ default: m.MaquetaPanel })));
 
 type Tab = string; // pestaña fija o id de una herramienta con Panel
-const TABS = ["book", "cork", "cards", "timeline", "map", "style", "search", "versions"] as const; // pestañas fijas; su texto es t("tab.<id>")
+const TABS = ["guide", "book", "layout", "cork", "cards", "timeline", "map", "style", "search", "review", "versions"] as const; // pestañas fijas; su texto es t("tab.<id>")
 
 // Tipo de párrafo de guion (data-sp="heading|action|character|…"). Vive en el núcleo para que el texto lo conserve
 // aunque el plugin Guion no esté cargado; el formato y las teclas los pone el plugin.
@@ -49,19 +61,25 @@ const Verso = Extension.create({
   },
 });
 
+const guion = (f?: Formato) => !!f && FORMATOS[f].base === "script"; // los guiones no llevan notas, imágenes ni tablas
+
 // `lang`: idioma de la obra; null = sin corrector. El corrector del navegador se apaga (lo sustituye el nuestro, en el idioma del libro).
 // `formato`: tipo de obra (la poesía cambia el Intro; el resto lo usan los plugins y el CSS).
-function SceneEditor({ html, onChange, tools, host, lang, formato }: { html: string; onChange: (html: string) => void; tools: ToolPlugin[]; host: ToolHost; lang: string | null; formato?: Formato }) {
+// `compacto`: en vista continua o dividida, sin paneles laterales de herramientas ni foco automático.
+function SceneEditor({ html, onChange, tools, host, lang, formato, comentarios, onComentario, compacto }: { html: string; onChange: (html: string) => void; tools: ToolPlugin[]; host: ToolHost; lang: string | null; formato?: Formato; comentarios: Comentario[]; onComentario: (cita: string, texto: string) => void; compacto?: boolean }) {
   const hostRef = useRef(host);
   hostRef.current = host;
+  const notasRef = useRef(comentarios);
+  notasRef.current = comentarios;
   const editor = useEditor({
-    extensions: [StarterKit, SpAttr, ...(formato === "poetry" ? [Verso] : []), ...(lang ? [ortografia(lang, () => hostRef.current.cards, (m) => hostRef.current.notify(m))] : []), ...tools.flatMap((t) => t.extensions?.(() => hostRef.current) ?? [])],
+    extensions: [StarterKit, SpAttr, ...(guion(formato) ? [] : EXTRAS), comentariosEnTexto(() => notasRef.current), ...(formato === "poetry" ? [Verso] : []), ...(lang ? [ortografia(lang, () => hostRef.current.cards, (m) => hostRef.current.notify(m))] : []), ...tools.flatMap((t) => t.extensions?.(() => hostRef.current) ?? [])],
     content: html,
-    autofocus: "end",
+    autofocus: compacto ? false : "end",
     editorProps: { attributes: { spellcheck: "false", lang: host.bookLang } },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
   useEffect(() => { if (editor) tools.forEach((t) => t.refresh?.(editor)); }, [editor, host.cards]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (editor) editor.view.dispatch(editor.state.tr); }, [editor, comentarios.map((c) => c.id).join()]); // eslint-disable-line react-hooks/exhaustive-deps
   const btn = (label: string, title: string, active: boolean, run: () => void) => (
     <button key={title} title={title} className={active ? "on" : ""} onMouseDown={(e) => { e.preventDefault(); run(); }}>{label}</button>
   );
@@ -79,6 +97,20 @@ function SceneEditor({ html, onChange, tools, host, lang, formato }: { html: str
           {btn("•", t("fmt.list"), editor.isActive("bulletList"), () => c().toggleBulletList().run())}
           {btn("❝", t("fmt.quote"), editor.isActive("blockquote"), () => c().toggleBlockquote().run())}
           {btn("⁂", t("fmt.sep"), false, () => c().setHorizontalRule().run())}
+          {!guion(formato) && <>
+            <span className="sep" />
+            {btn("¹", t("fmt.nota"), false, () => void insertarNota(editor))}
+            {btn("🖼", t("fmt.img"), false, () => void insertarImagen(editor, host.notify))}
+            {btn("▦", t("fmt.tabla"), false, () => insertarTabla(editor))}
+            {editor.isActive("table") && <>
+              {btn(t("fmt.t.mas"), t("fmt.t.mas"), false, () => filaTabla(editor, "mas"))}
+              {btn(t("fmt.t.menos"), t("fmt.t.menos"), false, () => filaTabla(editor, "menos"))}
+              {btn(t("fmt.t.masCol"), t("fmt.t.masCol"), false, () => filaTabla(editor, "masCol"))}
+              {btn(t("fmt.t.menosCol"), t("fmt.t.menosCol"), false, () => filaTabla(editor, "menosCol"))}
+              {btn(t("fmt.t.quitar"), t("fmt.t.quitar"), false, () => filaTabla(editor, "quitar"))}
+            </>}
+          </>}
+          {btn("💬", t("fmt.comentar"), false, () => void comentarSeleccion(editor, onComentario, host.notify))}
           <span className="sep" />
           {btn("↶", t("fmt.undo"), false, () => c().undo().run())}
           {btn("↷", t("fmt.redo"), false, () => c().redo().run())}
@@ -86,7 +118,7 @@ function SceneEditor({ html, onChange, tools, host, lang, formato }: { html: str
       )}
       <div className={`editor-row fmt-${formato ?? "novel"}`}>
         <EditorContent editor={editor} className="editor" />
-        {editor && tools.map((t) => t.Overlay && <t.Overlay key={t.id} editor={editor} host={host} />)}
+        {editor && !compacto && tools.map((t) => t.Overlay && <t.Overlay key={t.id} editor={editor} host={host} />)}
       </div>
     </>
   );
@@ -108,6 +140,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   const settings = useSettings();
   const dark = isDark(settings);
   const [focus, setFocus] = useState(false);
+  const [vista, setVista] = useState<Vista>("normal");
   const [fileName, setFileName] = useState("");
   const [status, setStatus] = useState("");
   const [warn, setWarn] = useState("");
@@ -116,13 +149,60 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   const [pending, setPending] = useState<any>(savedHandle && !granted ? savedHandle : null); // handle que falta autorizar tras reiniciar
   useEffect(() => { if (handle.current) setFileName(handle.current.name); }, []);
 
+  // Escritura en el archivo: en serie y sin pisar lo que haya cambiado fuera (otro equipo, la nube).
+  const guarda = useRef<Guardador | null>(null);
+  const [conflicto, setConflicto] = useState(false);
+  async function aDisco(p: Project, forzar = false) {
+    const h = handle.current;
+    if (guarda.current?.h !== h) {
+      // solo el archivo de la sesión anterior arrastra la fecha guardada; uno recién elegido toma la actual
+      const previo = h === savedHandle ? idbGet<{ name: string; m: number } | null>("visto").then((v) => (v?.name === h.name ? v!.m : undefined), () => undefined) : undefined;
+      guarda.current = guardador(h, previo, (m) => idbSet("visto", { name: h.name, m }).catch(() => {}));
+    }
+    const ok = await guarda.current!.guardar(p, forzar);
+    setConflicto(!ok);
+    return ok;
+  }
+  // El archivo cambió fuera: se carga el del disco o se guarda el propio; la otra versión queda en Versiones.
+  async function resolver(usar: "disco" | "mio") {
+    try {
+      const d = await readHandle(handle.current);
+      if (usar === "disco") {
+        const versions = snapshot({ ...d, book: project.book, cards: project.cards }, t("snap.mine")).versions;
+        if (!(await aDisco({ ...d, versions }, true))) return;
+        load({ ...d, versions }, handle.current.name);
+      } else {
+        const p = { ...project, versions: snapshot({ ...project, book: d.book, cards: d.cards }, t("snap.disk")).versions };
+        if (await aDisco(p, true)) setProject(p);
+      }
+    } catch { setWarn(t("w.file")); }
+  }
+
+  // Copia diaria en la carpeta de copias (Ajustes), si hubo cambios desde la anterior.
+  const actual = useRef(project);
+  actual.current = project;
+  const copiado = useRef<Project | null>(null);
+  async function copiar() {
+    const p = actual.current, dir = await getBackupDir();
+    if (!dir || copiado.current === p) return;
+    try {
+      if ((await dir.queryPermission({ mode: "readwrite" })) !== "granted") return flash(t("w.backupPerm"));
+      await copiaEn(dir, p, today());
+      copiado.current = p;
+    } catch { flash(t("w.backup")); }
+  }
+  useEffect(() => {
+    const primera = setTimeout(copiar, 60_000), cada = setInterval(copiar, 10 * 60_000);
+    return () => { clearTimeout(primera); clearInterval(cada); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Autoguardado (600 ms): IndexedDB siempre; archivo si hay uno autorizado. Los fallos se muestran, no se tragan.
   useEffect(() => {
     const timer = setTimeout(async () => {
       try { await idbSet("project", project); setWarn(""); }
       catch { setWarn(t("w.idb")); }
       if (!handle.current) return;
-      try { await writeProject(handle.current, project); setStatus(t("st.saved", { t: new Date().toLocaleTimeString() })); }
+      try { if (await aDisco(project)) setStatus(t("st.saved", { t: new Date().toLocaleTimeString() })); }
       catch { setWarn(t("w.file")); }
     }, 600);
     return () => clearTimeout(timer);
@@ -186,7 +266,10 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     ...plug.plugins.filter((p) => p.code && !TOOLS.some((x) => x.id === p.tool)).flatMap((p) => loadTool(p) ?? []),
   ];
   const toolName = (x: ToolPlugin) => tr("tool." + x.id, x.name);
-  const tabs = [...TABS, "plugins" as const].map((k) => ({ id: k as string, label: t(`tab.${k}`) }));
+  const tabs = [
+    ...[...TABS, "plugins" as const].map((k) => ({ id: k as string, label: t(`tab.${k}`) })),
+    ...tools.filter((x) => x.Panel && modoDe(x.id)).map((x) => ({ id: x.id, label: toolName(x) })), // herramientas que tienen sitio en un modo
+  ];
   const ToolPanel = tools.find((x) => x.id === tab)?.Panel;
 
   function load(p: Project, name: string) {
@@ -201,7 +284,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     try {
       const r = await pickProject();
       if (!r) return;
-      if (handle.current) await writeProject(handle.current, project).catch(() => {}); // lo último escrito (<600 ms) no se pierde al cambiar de archivo
+      if (handle.current && !(await aDisco(project).catch(() => true))) return; // lo último escrito (<600 ms) no se pierde al cambiar de archivo
       handle.current = r.handle;
       setPending(null);
       idbSet("handle", r.handle).catch(() => {});
@@ -213,7 +296,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   // Guarda ya (sin esperar al autoguardado de 600 ms); sin archivo asociado abre Guardar como…
   async function saveNow() {
     if (!handle.current) return void (await saveAs());
-    try { await writeProject(handle.current, project); setStatus(t("st.saved", { t: new Date().toLocaleTimeString() })); recentAdd(handle.current); }
+    try { if (!(await aDisco(project))) return; setStatus(t("st.saved", { t: new Date().toLocaleTimeString() })); recentAdd(handle.current); }
     catch { setWarn(t("w.file")); }
   }
 
@@ -225,8 +308,9 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
       if (i === 0) { await saveAs(); if (!handle.current && canSavePick()) return; } // sin selector, Guardar como descarga el .shks: ya se puede cerrar
     }
     try {
-      if (handle.current) { await writeProject(handle.current, project); recentAdd(handle.current); }
+      if (handle.current) { if (!(await aDisco(project))) return; recentAdd(handle.current); }
     } catch { if (!(await confirmAsk(t("d.closeFail")))) return; }
+    await copiar();
     onClose();
   }
 
@@ -240,6 +324,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
       setPending(null);
       idbSet("handle", r.handle).catch(() => {});
       recentAdd(r.handle);
+      setConflicto(false);
       setProject({ ...project }); // dispara el autoguardado
     } catch { setWarn(t("w.file")); }
   }
@@ -277,6 +362,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   const bookLang = project.lang || settings.lang; // proyectos antiguos sin idioma: el de la interfaz
   const spellLang = settings.spell && SPELL_LANGS.includes(bookLang) ? bookLang : null;
   const langs = [...new Set([...SPELL_LANGS, bookLang])].map((c) => [c, langName(c)]).sort((a, b) => a[1].localeCompare(b[1]));
+  const exportar = (k: ExportKind) => exportAs(k, scope, bookLang, project.ext?.maqueta?.[scope.id]).then((n) => { if (n) setStatus(t("st.exported", { n })); }, (e) => { console.error(e); flash(t("w.export")); });
   const host: ToolHost = { project, scope, setProject, openScene, notify: setStatus, t: (k, v) => t(k as Key, v), lang: settings.lang, bookLang, current, cards, addCard: (c) => setCards((cs) => [...cs, c]), patchCard, openCard: (id) => { setCardId(id); setTab("cards"); } };
 
   async function replaceEverywhere(q: string, r: string) {
@@ -311,6 +397,21 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     setRev((v) => v + 1);
   }
 
+  const editorDe = (nodo: Node, compacto = vista !== "normal") => (
+    <SceneEditor
+      key={[nodo.id, rev, bookLang, settings.spell, compacto, ...tools.map((x) => x.id)].join()} // las extensiones se fijan al crear el editor: otro idioma o plugin = editor nuevo
+      html={nodo.content ?? ""}
+      tools={tools}
+      host={nodo.id === current?.id ? host : { ...host, current: nodo }}
+      lang={spellLang}
+      formato={formatoDe(book, nodo.id)}
+      comentarios={((project.ext?.comentarios ?? []) as Comentario[]).filter((c) => c.cap === nodo.id && !c.hecho)}
+      onComentario={(cita, texto) => setProject((p) => ({ ...p, ext: { ...p.ext, comentarios: [...(p.ext?.comentarios ?? []), { id: crypto.randomUUID(), cap: nodo.id, cita, texto, autor: book.meta?.author ?? "", fecha: new Date().toISOString() }] } }))}
+      onChange={(html) => setBook((b) => update(b, nodo.id, (n) => ({ ...n, content: html })))}
+      compacto={compacto}
+    />
+  );
+
   const editable = !!current && conTexto(current.kind);
   const sceneCards = editable ? cards.filter((c) => mentions(current!, c.name, c.alias).length) : [];
   const dayWords = writtenOn(project.log, today());
@@ -318,11 +419,29 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
   return (
     <div className={`app ${focus ? "focus" : ""} ${settings.quiet ? "quiet" : ""}`} style={{ "--editor-size": settings.fontSize + "px", "--editor-width": settings.width + "px" } as React.CSSProperties}>
       <DialogHost />
+      {!settings.tour && !hidden && <Recorrido />}
+      <Paleta acciones={() => [
+        ...tabs.map((x) => ({ grupo: t("pal.ir"), nombre: x.label, run: () => setTab(x.id) })),
+        { grupo: t("pal.ir"), nombre: t("settings.open"), run: () => setTab("settings") },
+        { grupo: t("g.file"), nombre: t("file.new"), run: onNew }, { grupo: t("g.file"), nombre: t("file.open"), run: openFile },
+        { grupo: t("g.file"), nombre: t("file.save"), run: saveNow }, { grupo: t("g.file"), nombre: t("file.saveas"), run: saveAs },
+        ...(["pdf", "docx", "epub", "md", "html"] as const).map((k) => ({ grupo: t("file.exportH"), nombre: t(`export.${k}`), run: () => void exportar(k) })),
+        { grupo: t("g.view"), nombre: t("view.focus"), run: () => { setTab("book"); setFocus(true); } },
+        { grupo: t("g.view"), nombre: settings.quiet ? t("view.check") : t("view.quiet"), run: () => saveSettings({ quiet: !settings.quiet }) },
+        { grupo: t("g.insert"), nombre: t("ins.structure"), run: addTemplate },
+        ...tools.flatMap((x) => [
+          ...(x.Panel ? [{ grupo: t("bar.tools"), nombre: toolName(x), run: () => setTab(x.id) }] : []),
+          ...(x.actions ?? []).map((ac) => ({ grupo: toolName(x), nombre: tr("a." + ac.label, ac.label), run: () => void ac.run(host) })),
+        ]),
+        ...scenes(book).map((s) => ({ grupo: t("pal.cap"), nombre: s.path ? `${s.path} › ${s.scene.title}` : s.scene.title, run: () => openScene(s.scene.id) })),
+        ...cards.map((c) => ({ grupo: t("tab.cards"), nombre: c.name, run: () => host.openCard(c.id) })),
+      ]} />
       <Ribbon
         tabs={tabs} tab={tab} onTab={(id) => { setTab(id); if (id === "map") setCardId(null); }}
         book={book} scope={scope} current={current} ambito={ambito} onAmbito={() => setAmbito(ambito === "libro" ? "todo" : "libro")}
+        vista={vista} onVista={setVista}
         goal={goal} onGoal={(n) => setProject((p) => ({ ...p, goal: n }))} onConvert={convertir}
-        onNew={onNew} onOpen={openFile} onSave={saveNow} onSaveAs={saveAs} onClose={cerrar} onImport={(k) => void importDoc(k, host)} onExport={(k: ExportKind) => exportAs(k, scope, bookLang).then((n) => { if (n) setStatus(t("st.exported", { n })); }, () => setWarn(t("w.export")))}
+        onNew={onNew} onOpen={openFile} onSave={saveNow} onSaveAs={saveAs} onClose={cerrar} onImport={(k) => void importDoc(k, host)} onExport={(k: ExportKind) => void exportar(k)}
         onStructure={addTemplate} onSceneTpl={sceneTpls.length > 0 ? addSceneTemplate : undefined}
         onAddCard={() => host.addCard({ id: crypto.randomUUID(), type: "character", name: t("card.new"), notes: "" })}
         onScene={(patch) => current && setBook((b) => update(b, current.id, (n) => ({ ...n, ...patch })))}
@@ -384,18 +503,28 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
       <main className="main">
         <header className="toolbar">
           {ToolPanel ? <span className="title">{toolName(tools.find((x) => x.id === tab)!)}</span>
+            : tab === "layout" ? <span className="title">{t("tab.layout")}: {scope.title}</span>
             : tab === "cards" || tab === "map" || !current ? <span className="title">{card?.name ?? (tab === "map" ? t("map.title") : "")}</span>
             : <input className="title" aria-label={t("title.rename")} title={t("title.rename")} value={current.title} onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, title: e.target.value })))} />}
         </header>
 
         {ToolPanel ? (
           <ToolPanel host={host} />
+        ) : tab === "guide" ? (
+          <Guia project={project} obra={libro ?? book} onIr={(id) => {
+            if (id === "datos") { setSelected((libro ?? book).id); setTab("book"); }
+            else setTab(tabs.some((x) => x.id === id) ? id : "plugins");
+          }} />
         ) : tab === "plugins" ? (
           <PluginsPanel state={plug} onChange={setPlug} onMsg={flash} tools={TOOLS} catalog={catalog} />
         ) : tab === "settings" ? (
           <SettingsPanel update={info} onUpdate={onUpdate} />
         ) : tab === "timeline" ? (
           <Timeline book={scope} onSelect={openScene} onDate={(id, date) => setBook((b) => update(b, id, (n) => ({ ...n, date })))} />
+        ) : tab === "layout" ? (
+          <Suspense fallback={<p className="empty">{t("w.loading")}</p>}><MaquetaPanel obra={scope} lang={bookLang} guardado={project.ext?.maqueta?.[scope.id]}
+            onChange={(a) => setProject((p) => ({ ...p, ext: { ...p.ext, maqueta: { ...p.ext?.maqueta, [scope.id]: a } } }))}
+            onPdf={() => void exportar("pdf")} onMeta={() => { setSelected(scope.id); setTab("book"); }} /></Suspense>
         ) : tab === "cork" ? (
           <Corkboard book={scope} onSelect={openScene} onSummary={(id, summary) => setBook((b) => update(b, id, (n) => ({ ...n, summary })))} />
         ) : tab === "search" ? (
@@ -403,6 +532,8 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
         ) : tab === "style" ? (
           <Analysis book={scope} current={current} cards={cards} project={project} lang={bookLang}
             onDailyGoal={(n) => setProject((p) => ({ ...p, dailyGoal: n }))} />
+        ) : tab === "review" ? (
+          <RevisionPanel project={project} setProject={setProject} onOpen={openScene} onTexto={() => setRev((v) => v + 1)} />
         ) : tab === "versions" ? (
           <Versions
             project={project}
@@ -440,20 +571,22 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
                 {sceneCards.map((c) => <button key={c.id} className="chip" onClick={() => { setCardId(c.id); setTab("cards"); }}>{c.name}</button>)}
               </div>
             )}
-            <SceneEditor
-              key={[current!.id, rev, bookLang, settings.spell, ...tools.map((x) => x.id)].join()} // las extensiones se fijan al crear el editor: otro idioma o plugin = editor nuevo
-              html={current!.content ?? ""}
-              tools={tools}
-              host={host}
-              lang={spellLang}
-              formato={formatoDe(book, current!.id)}
-              onChange={(html) => setBook((b) => update(b, current!.id, (n) => ({ ...n, content: html })))}
-            />
+            {vista === "continua" ? <Continua capitulos={scenes(libro ?? book).map((s) => s.scene)} inicial={current!.id} editor={(n) => editorDe(n)} onAbrir={(id) => { setSelected(id); setVista("normal"); }} />
+              : vista === "partida" ? <Partida principal={editorDe(current!)} actual={current!.id} capitulos={scenes(libro ?? book).map((s) => s.scene)} editor={(n) => editorDe(n)} />
+              : editorDe(current!)}
           </>
         ) : current && (esObra(current.kind) || esContenedor(current.kind)) ? (
           <BookMeta key={current.id} node={current} onChange={(meta) => setBook((b) => update(b, current.id, (n) => ({ ...n, meta })))} />
         ) : (
           <p className="empty" style={{ whiteSpace: "pre-line" }}>{t("empty.scene")}</p>
+        )}
+        {conflicto && (
+          <div className="conflicto" role="alert">
+            <span>{t("w.conflict")}</span>
+            <button onClick={() => resolver("disco")}>{t("conflict.disk")}</button>
+            <button onClick={() => resolver("mio")}>{t("conflict.mine")}</button>
+            <button onClick={saveAs}>{t("file.saveas")}</button>
+          </div>
         )}
         <div className="statusbar">
           {warn ? <span className={warn.startsWith("⚠") ? "warn" : "ok"}>{warn}</span> : <span>{fileName ? `${fileName} · ${status || t("st.open")}` : status || t("st.browserOnly")}</span>}
