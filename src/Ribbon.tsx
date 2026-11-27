@@ -2,14 +2,15 @@ import { useEffect } from "react";
 import { Node, STATUSES, Status, conTexto, esContenedor, etiqueta, formatoDe } from "./tree";
 import type { ToolHost, ToolPlugin } from "./pluginApi";
 import type { ExportKind } from "./exporting";
+import type { ImportKind } from "./importing";
 import { t, tr } from "./i18n";
 
 export interface Tab { id: string; label: string }
 export interface RibbonProps {
-  tabs: Tab[]; more: Tab[]; tab: string; onTab: (id: string) => void;
+  tabs: Tab[]; tab: string; onTab: (id: string) => void;
   book: Node; scope: Node; current?: Node; ambito: "libro" | "todo"; onAmbito: () => void;
   goal: number; onGoal: (n: number) => void; onConvert: () => void;
-  onNew: () => void; onOpen: () => void; onSave: () => void; onSaveAs: () => void; onClose: () => void; onExport: (k: ExportKind) => void;
+  onNew: () => void; onOpen: () => void; onSave: () => void; onSaveAs: () => void; onClose: () => void; onExport: (k: ExportKind) => void; onImport: (k: ImportKind) => void;
   onStructure: () => void; onSceneTpl?: () => void; onAddCard: () => void;
   onScene: (patch: Partial<Node>) => void;
   tools: ToolPlugin[]; host: ToolHost;
@@ -19,20 +20,20 @@ export interface RibbonProps {
 
 const num = (v: string) => Math.max(0, Math.floor(Number(v))) || 0;
 
+const close = (d: HTMLDetailsElement) => [d, ...d.querySelectorAll("details")].forEach((x) => (x.open = false));
 // Menús <details>: se cierran al hacer clic fuera o al elegir una opción.
 function useCloseMenus() {
   useEffect(() => {
-    const f = (e: MouseEvent) => document.querySelectorAll<HTMLDetailsElement>("details.menu[open]").forEach((d) => { if (!d.contains(e.target as globalThis.Node)) d.open = false; });
+    const f = (e: MouseEvent) => document.querySelectorAll<HTMLDetailsElement>("details.menu[open]").forEach((d) => { if (!d.contains(e.target as globalThis.Node)) close(d); });
     document.addEventListener("mousedown", f);
     return () => document.removeEventListener("mousedown", f);
   }, []);
 }
-const item = (e: React.MouseEvent, run: () => void) => { (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open"); run(); };
+const item = (e: React.MouseEvent, run: () => void) => { close((e.currentTarget as HTMLElement).closest<HTMLDetailsElement>("details.menu")!); run(); };
 
 export function Ribbon(p: RibbonProps) {
   useCloseMenus();
   const scene = p.current && conTexto(p.current.kind) ? p.current : undefined; // capítulo (libro) o escena (guion)
-  const moreOn = p.more.find((m) => m.id === p.tab);
   return (
     <nav className="topbar">
       <div className="tabs" role="tablist">
@@ -44,19 +45,25 @@ export function Ribbon(p: RibbonProps) {
             <button onClick={(e) => item(e, p.onSave)}>{t("file.save")}<kbd>Ctrl+S</kbd></button>
             <button onClick={(e) => item(e, p.onSaveAs)}>{t("file.saveas")}<kbd>Ctrl+Shift+S</kbd></button>
             <hr />
-            <span className="muted">{t("file.exportH")}{esContenedor(p.book.kind) && ` · ${p.scope.kind === "book" ? `«${p.scope.title}»` : t("export.all")}`}</span>
-            {(["md", "docx", "epub", "pdf"] as const).map((k) => <button key={k} onClick={(e) => item(e, () => p.onExport(k))}>{t(`export.${k}`)}</button>)}
+            <details className="submenu" name="filesub">
+              <summary>{t("file.importH")}<span aria-hidden>▸</span></summary>
+              <div>
+                {(["md", "docx"] as const).map((k) => <button key={k} onClick={(e) => item(e, () => p.onImport(k))}>{t(`import.${k}`)}</button>)}
+              </div>
+            </details>
+            <details className="submenu" name="filesub">
+              <summary>{t("file.exportH")}<span aria-hidden>▸</span></summary>
+              <div>
+                {esContenedor(p.book.kind) && <span className="muted">{t("export.scope", { what: p.scope.kind === "book" ? `«${p.scope.title}»` : t("export.all") })}</span>}
+                {(["md", "docx", "epub", "pdf", "html", "tex", "fountain"] as const).filter((k) => k !== "fountain" || p.scope.kind !== "script").map((k) => <button key={k} onClick={(e) => item(e, () => p.onExport(k))}>{t(`export.${k}`)}</button>)}
+                {p.tools.flatMap((x) => (x.actions ?? []).filter((a) => a.exporta).map((a) => <button key={x.id + a.label} onClick={(e) => item(e, () => void a.run(p.host))}>{tr("a." + a.label, a.label)}</button>))}
+              </div>
+            </details>
             <hr />
             <button title={t("file.close.title")} onClick={(e) => item(e, p.onClose)}>{t("file.close")}</button>
           </div>
         </details>
         {p.tabs.map((x) => <button key={x.id} role="tab" aria-selected={p.tab === x.id} className={p.tab === x.id ? "on" : ""} onClick={() => p.onTab(x.id)}>{x.label}</button>)}
-        {p.more.length > 0 && (
-          <details className="menu moremenu">
-            <summary className={moreOn ? "on" : ""}>{moreOn ? `${moreOn.label} ▾` : t("tabs.more")}</summary>
-            <div>{p.more.map((m) => <button key={m.id} role="tab" aria-selected={p.tab === m.id} onClick={(e) => item(e, () => p.onTab(m.id))}>{m.label}</button>)}</div>
-          </details>
-        )}
       </div>
       <div className="ribbon">
         <div className="rgroup">
@@ -90,17 +97,6 @@ export function Ribbon(p: RibbonProps) {
           </div>
           <span className="rlabel">{t("g.project")}</span>
         </div>
-        {p.tools.some((x) => x.actions?.length) && (
-          <div className="rgroup">
-            <div className="rbtns">
-              <details className="menu">
-                <summary>{t("tools.menu")}</summary>
-                <div>{p.tools.flatMap((x) => (x.actions ?? []).map((a) => <button key={x.id + a.label} onClick={(e) => item(e, () => void a.run(p.host))}>{tr("a." + a.label, a.label)}</button>))}</div>
-              </details>
-            </div>
-            <span className="rlabel">{t("g.plugins")}</span>
-          </div>
-        )}
         <div className="rgroup">
           <div className="rbtns">
             <button onClick={p.onFocus}>{p.focus ? t("view.exit") : t("view.focus")}</button>

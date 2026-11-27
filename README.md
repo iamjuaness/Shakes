@@ -28,7 +28,7 @@ Tus datos son tuyos: archivos JSON abiertos, sin cuenta ni nube.</p>
 <table>
   <tr>
     <td><img src="docs/screenshots/corcho.png" alt="Corcho con sinopsis por escena"><br><sub><b>Corcho</b> · sinopsis y metas por escena</sub></td>
-    <td><img src="docs/screenshots/mapa.png" alt="Mapa de relaciones entre fichas"><br><sub><b>Mapa de relaciones</b> · fichas y vínculos</sub></td>
+    <td><img src="docs/screenshots/mapa.png" alt="Mapa de conexiones entre personajes"><br><sub><b>Mapa de conexiones</b> · fichas y vínculos</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/estilo.png" alt="Análisis de estilo y progreso diario"><br><sub><b>Estilo</b> · legibilidad, repeticiones y progreso diario</sub></td>
@@ -52,7 +52,7 @@ Tus datos son tuyos: archivos JSON abiertos, sin cuenta ni nube.</p>
 - Nombres de 62 culturas y 8 épocas, con las costumbres de cada una, e inventados para fantasía y ciencia ficción.
 
 **Planificación y revisión**
-- Corcho, línea de tiempo narrativa y cronológica, estructuras clásicas, fichas del mundo con detección de apariciones y mapa de relaciones.
+- Corcho, línea de tiempo narrativa y cronológica, estructuras clásicas, fichas del mundo con detección de apariciones y mapa de conexiones entre personajes.
 - Estadísticas, repeticiones y muletillas, búsqueda y reemplazo, versiones con comparación y restauración.
 
 **Salida**
@@ -86,7 +86,7 @@ Hay un proyecto de ejemplo en [`ejemplos/La_ultima_farola.shks`](ejemplos/La_ult
 
 ## Plugins
 
-Un plugin es un archivo JSON. Los de temas y estructuras **no ejecutan código**: solo aportan datos validados. Los de herramientas (`"tool": "id"` y `"main": "main.js"`) traen su código compilado con `npm run plugins` desde [`plugins/herramientas`](plugins/herramientas); Shakes pide confirmación antes de instalarlos y los incluidos en la app se actualizan solos. Todo se instala desde **Más ▾ → Plugins**, que también lista los de la carpeta [`plugins/`](plugins/README.md).
+Un plugin es un archivo JSON. Los de temas y estructuras **no ejecutan código**: solo aportan datos validados. Los de herramientas (`"tool": "id"` y `"main": "main.js"`) traen su código compilado con `npm run plugins` desde [`plugins/herramientas`](plugins/herramientas); Shakes pide confirmación antes de instalarlos y los incluidos en la app se actualizan solos. Todo se instala desde la pestaña **Plugins**, que también lista los de la carpeta [`plugins/`](plugins/README.md).
 
 ```json
 {

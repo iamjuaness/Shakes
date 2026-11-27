@@ -23,7 +23,7 @@ export function langName(code: string): string {
 
 const LOCAL: Record<string, string[]> = { es: [esAff, esDic], en: [enAff, enDic] };
 const texto = (u: string) => fetch(u).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.text(); });
-async function diccionario(code: string): Promise<string[]> {
+export async function diccionario(code: string): Promise<string[]> { // [aff, dic]; el plugin de idiomas lo usa como base
   if (LOCAL[code]) return Promise.all(LOCAL[code].map(texto));
   const key = "dic:" + code;
   const hit = await idbGet<string[]>(key).catch(() => undefined);

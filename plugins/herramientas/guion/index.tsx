@@ -170,7 +170,7 @@ async function exportar(h: ToolHost, pdf: boolean) {
   const obra = guionDe(h);
   if (!obra) return h.notify(L(h, "⚠ Este proyecto no tiene guion.", "⚠ This project has no script."));
   const listo = (n: string | null) => { if (n) h.notify(L(h, `«${n}» guardado`, `“${n}” saved`)); };
-  if (!pdf && fg(obra.meta?.formato) !== "film") return h.notify(L(h, "Fountain es el formato del guion de cine; para teatro, cómic o radio usa «Exportar guion (PDF)…».", "Fountain is for screenplays; for stage, comics or radio use “Export script (PDF)…”."));
+  if (!pdf && fg(obra.meta?.formato) !== "film") return h.notify(L(h, "Fountain es el formato del guion de cine; para teatro, cómic o radio usa «Guion (PDF)…».", "Fountain is for screenplays; for stage, comics or radio use “Script (PDF)…”."));
   if (!pdf) return listo(await guardar(`${obra.title}.fountain`, fountain(obra), "text/plain"));
   // Carta en EE. UU.; A4 en Europa y Latinoamérica. Se propone el del idioma del guion.
   const papeles = papelPara(h.bookLang) === "A4" ? (["A4", "letter"] as const) : (["letter", "A4"] as const);
@@ -186,7 +186,7 @@ export const guion: ToolPlugin = {
   Overlay: Barra,
   Panel,
   actions: [
-    { label: "Exportar guion (Fountain)…", run: (h) => exportar(h, false) },
-    { label: "Exportar guion (PDF)…", run: (h) => exportar(h, true) },
+    { label: "Guion (Fountain)…", exporta: true, run: (h) => exportar(h, false) },
+    { label: "Guion (PDF)…", exporta: true, run: (h) => exportar(h, true) },
   ],
 };

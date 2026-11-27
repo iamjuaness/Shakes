@@ -38,7 +38,7 @@ console.log("export ok");
 // ---- metadatos y portada ----
 {
   const { wrapIn, toMarkdown } = await import("./tree.ts");
-  const { toFountain, toLatex } = await import("../plugins/herramientas/exportar-extra/formatos.ts");
+  const { toFountain, toLatex } = await import("./formatos.ts");
   const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
   let libro = sampleBook();
   libro = { ...libro, meta: { author: "Ana Pérez", year: "2024", blurb: "Una historia & más", cover: png, cw: 1, ch: 1 } };

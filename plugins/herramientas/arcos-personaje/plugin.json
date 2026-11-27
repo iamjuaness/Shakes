@@ -2,8 +2,8 @@
   "shakes": 1,
   "id": "arcos-personaje",
   "name": "Arcos de personaje",
-  "version": "1.1.0",
-  "description": "Matriz de presencia de cada personaje por escena.",
+  "version": "2.0.0",
+  "description": "Arco de cada personaje: tipo, momentos clave, curva de cambio, presencia por capítulo y avisos.",
   "tool": "arcos-personaje",
   "main": "main.js"
 }

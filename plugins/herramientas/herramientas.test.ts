@@ -5,9 +5,9 @@ import { lint } from "./linter-estilo/reglas.ts";
 import { fallos, palabrasDe } from "./ortografia/revisar.ts";
 import { muletillas, repeticiones } from "./repeticiones/reglas.ts";
 import { inconsistencias } from "./inconsistencias/reglas.ts";
-import { familia } from "./arbol-genealogico/familia.ts";
-import { docxBloques, estructura, mdBloques } from "./importar/importar.ts";
-import { toFountain, toLatex } from "./exportar-extra/formatos.ts";
+import { PASO, colocar, familia } from "./arbol-genealogico/familia.ts";
+import { docxBloques, estructura, mdBloques } from "../../src/importar.ts";
+import { toFountain, toLatex } from "../../src/formatos.ts";
 import { editorial } from "./manuscrito-editorial/editorial.ts";
 import { generar } from "./_comun/nombres.ts";
 import { cardToMd, nombreArchivo } from "./obsidian-sync/obsidian.ts";
@@ -73,6 +73,38 @@ assert.deepEqual(inconsistencias(cards, sc).map((i) => [i.attr, i.escena]), [["o
 // genealogía
 const f = familia([{ from: "a", to: "b", label: "padre de" }, { from: "c", to: "b", label: "madre de" }, { from: "d", to: "b", label: "hijo de" }, { from: "a", to: "c", label: "esposo de" }]);
 assert.deepEqual([f.gen.get("a"), f.gen.get("c"), f.gen.get("b"), f.gen.get("d")], [0, 0, 1, 2], "pareja misma generación; «d hijo de b» queda bajo b");
+{
+  const r = (from: string, label: string, to: string) => ({ from, label, to });
+  const g = familia([
+    r("abu", "abuelo de", "n1"), r("abu", "padre de", "papa"), r("papa", "papa de", "n1"), r("papa", "papá de", "n2"), r("mama", "mamá de", "n1"), r("mama", "madre de", "n2"),
+    r("papa", "esposo de", "mama"), r("mama", "esposa de", "papa"), r("suegro", "padre de", "mama"), r("x", "mata a", "papa"),
+    r("z1", "madre de", "z2"), r("h1", "hermano de", "h2"),
+  ]);
+  assert.deepEqual(["abu", "suegro", "papa", "mama", "n1", "n2"].map((i) => g.gen.get(i)), [0, 0, 1, 1, 2, 2], "abuelos, padres e hijos por generación; el suegro baja junto al abuelo");
+  assert.equal(g.parejas.length, 1, "la pareja dicha dos veces cuenta una");
+  assert.equal(g.familias.length, 3);
+  assert.ok(!g.gen.has("x"), "una relación que no es de parentesco no entra");
+  const { pos, marcos } = colocar(g);
+  const x = (i: string) => pos.get(i)!.x;
+  assert.equal(Math.abs(x("papa") - x("mama")), PASO, "la pareja va junta");
+  assert.ok(Math.abs((x("n1") + x("n2")) / 2 - (x("papa") + x("mama")) / 2) <= 2, "los hijos van centrados bajo sus padres");
+  assert.ok(Math.sign(x("abu") - x("suegro")) === Math.sign(x("papa") - x("mama")), "cada abuelo del lado de su hijo");
+  for (const [a, p] of pos) for (const [b, q] of pos) if (a < b && p.y === q.y) assert.ok(Math.abs(p.x - q.x) >= PASO - 1, `${a} y ${b} se pisan`);
+  for (const a of marcos) for (const b of marcos) if (a !== b) assert.ok(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y, "familias separadas");
+  // bucles (Dark): quien cierra el ciclo se aparta y el resto queda siempre por debajo de sus padres
+  const d = familia([
+    r("agnes", "madre de", "tronte"), r("tronte", "padre de", "ulrich"), r("ulrich", "padre de", "mikkel"), r("mikkel", "padre de", "jonas"), r("jonas", "padre de", "desc"), r("desc", "padre de", "tronte"),
+    r("char", "madre de", "elis"), r("elis", "madre de", "char"), r("hannah", "madre de", "agnes"), r("hannah", "madre de", "jonas"), r("mikkel", "esposo de", "hannah"),
+  ]);
+  assert.equal(d.paradojas.length, 2);
+  const e = familia([r("bernd", "padre de", "peter"), r("peter", "esposo de", "char"), r("peter", "padre de", "elis"), r("char", "madre de", "elis"), r("noah", "padre de", "char"), r("elis", "madre de", "char"), r("noah", "pareja de", "elis")]);
+  assert.equal(e.gen.get("peter"), e.gen.get("char"), "el bucle se corta donde el matrimonio sigue junto");
+  for (const [p, h] of d.padres) assert.ok(d.gen.get(h)! > d.gen.get(p)!, `${h} no queda bajo ${p}`);
+  assert.ok(Math.max(...d.gen.values()) <= 6, "sin estirarse");
+  assert.equal(d.familias.length, 2);
+  const c = colocar(d);
+  assert.equal(c.pos.size, d.gen.size);
+}
 
 // importar
 const md = "Intro suelta\n\n# Alfa\n\nTexto **fuerte** y *suave*.\n\n## Beta\nOtra";
@@ -291,4 +323,117 @@ import { sinonimos } from "./_comun/sinonimos.ts";
   assert.ok(C.idea({ ...ctx, cards: [] }, "conflicto").length > 10, "sin fichas también");
   assert.equal(C.atasco(ctx).length, 3);
   console.log("taller ok");
+}
+
+// cada herramienta del catálogo tiene icono para la barra derecha
+{
+  const { readdirSync, existsSync, readFileSync } = await import("node:fs");
+  const { TOOL_ICONS } = await import("../../src/toolIcons.ts");
+  const dir = new URL(".", import.meta.url);
+  for (const d of readdirSync(dir)) {
+    const m = new URL(`${d}/plugin.json`, dir);
+    if (existsSync(m)) assert.ok(TOOL_ICONS[JSON.parse(readFileSync(m, "utf8")).tool], `${d}: sin icono`);
+  }
+  console.log("iconos ok");
+}
+
+// arcos de personaje y tramas
+{
+  const arco = await import("./arcos-personaje/logica.ts");
+  const orden = ["a", "b", "c", "d", "e", "f", "g"];
+  const r = arco.revisar({ tipo: "positivo", hitos: { inicio: { scene: "a" }, medio: { scene: "e" }, crisis: { scene: "b", valor: 2 }, final: { scene: "borrado" } } }, orden, [0, 2, 0, 0, 0, 1, 0]);
+  assert.deepEqual(r.puestos.map((p) => [p.id, p.i, p.valor]), [["inicio", 0, -1], ["medio", 4, 0], ["crisis", 1, 2]]);
+  assert.deepEqual(r.faltan, ["detonante", "climax", "final"], "un capítulo borrado cuenta como sin situar");
+  assert.deepEqual(r.desorden, [["medio", "crisis"]]);
+  assert.deepEqual(r.ausencias, [[2, 4]], "antes de aparecer no es ausencia; un solo capítulo tampoco");
+  assert.equal(arco.revisar({ tipo: "plano", hitos: {} }, orden, orden.map(() => 0)).nunca, true);
+  assert.deepEqual(arco.revisar({ tipo: "plano", hitos: {} }, orden, [1, 0, 0, 0, 0, 0, 0]).ausencias, [[1, 6]], "desaparecer hasta el final avisa");
+
+  const tr = await import("./tramas/logica.ts");
+  let d: import("./tramas/logica.ts").Datos = { plots: [{ id: "p", name: "P", color: "red" }, { id: "q", name: "Q", color: "blue" }], map: { a: ["p", "q"], f: ["p"] } };
+  assert.deepEqual(tr.revisar(tr.marcas(d, "p", orden), 7), [{ tipo: "hueco", de: 1, a: 4 }, { tipo: "sinResolver" }], "los datos de la versión anterior siguen valiendo");
+  assert.deepEqual(tr.revisar(tr.marcas(d, "q", orden), 7), [{ tipo: "sinResolver" }, { tipo: "abandonada", de: 0 }]);
+  d = { ...d, notas: { [tr.clave("a", "p")]: { fase: "resolucion", texto: "fin" } } };
+  assert.ok(tr.revisar(tr.marcas(d, "p", orden), 7).some((a) => a.tipo === "tras"));
+  assert.equal(tr.alternar(d, "a", "p").notas![tr.clave("a", "p")], undefined, "quitar el punto quita su nota");
+  assert.deepEqual(tr.alternar(d, "b", "q").map.b, ["q"]);
+  const sin = tr.borrar(d, "p");
+  assert.deepEqual([sin.plots.length, sin.map.a, sin.map.f, Object.keys(sin.notas!)], [1, ["q"], [], []]);
+  assert.deepEqual(tr.revisar([], 7), [{ tipo: "vacia" }]);
+  console.log("arcos y tramas ok");
+}
+
+// creador de idiomas y sistemas de magia
+{
+  const l = await import("./idiomas/logica.ts");
+  const { leerBase } = await import("./idiomas/base.ts");
+  const tr = await import("./idiomas/traductor.ts");
+  const { readFileSync } = await import("node:fs");
+  const azar = l.azarDe("prueba");
+  const i0 = { ...l.nuevoIdioma("1", "Prueba"), consonantes: "k t", vocales: "a", silabas: "CV", prohibidas: "kaka", minimo: 2, maximo: 2 };
+  const vistas = new Set<string>();
+  for (let n = 0; n < 40; n++) { const w = l.generar(i0, azar, vistas); if (!w) break; assert.match(w, /^([kt]a){2}$/); assert.ok(!w.includes("kaka") && !vistas.has(w)); vistas.add(w); }
+  assert.equal(vistas.size, 3, "solo caben tata, kata y taka");
+  assert.equal(l.generar({ ...i0, vocales: "" }, azar), "", "sin vocales no hay palabras");
+  assert.match(l.generar({ ...i0, silabas: "C(V)n", prohibidas: "", minimo: 1, maximo: 1 }, azar), /^[kt]a?n$/);
+
+  // diccionario completo desde el idioma base real
+  const leer = (p: string) => readFileSync(new URL(`../../node_modules/${p}`, import.meta.url), "utf8");
+  const base = leerBase(leer("dictionary-es/index.aff"), leer("dictionary-es/index.dic"), "es");
+  assert.ok(base.lemas.length > 40000);
+  assert.ok(base.origen("cantaban").includes("cantar") && base.origen("casas").includes("casa"), "de la forma a la palabra del diccionario");
+  let i = l.nuevoIdioma("idioma-1", "Veyrano");
+  const t0 = Date.now();
+  const lex = l.lexicoCompleto(i, base.lemas, tr.GRAMATICALES);
+  assert.ok(Date.now() - t0 < 5000, "el diccionario entero se calcula rápido");
+  assert.equal(base.lemas.filter((x) => !lex.get(x)).length, 0, "todas las palabras tienen la suya");
+  assert.ok(new Set(lex.values()).size > lex.size * 0.995, "casi sin homónimos");
+  assert.equal(l.lexicoCompleto(i, base.lemas, tr.GRAMATICALES).get("dragón"), lex.get("dragón"), "estable");
+  assert.notEqual(l.lexicoCompleto({ ...i, semilla: 1 }, ["dragón"]).get("dragón"), l.lexicoCompleto(i, ["dragón"]).get("dragón"));
+
+  const analiza = (f: string) => tr.analizar(f, base, "es").map((x) => `${x.lema}:${x.tipo}${x.rasgos.length ? ":" + x.rasgos.join("+") : ""}`);
+  assert.deepEqual(analiza("El rey tiene dos dragones rojos"), ["el:det", "rey:nombre", "tener:verbo", "dos:det", "dragón:nombre:plural", "rojo:adj:plural"]);
+  assert.deepEqual(analiza("Nosotros cantábamos"), ["nosotros:pron", "cantar:verbo:imperfecto"]);
+  assert.deepEqual(analiza("No he comido"), ["no:neg", "comer:verbo:pasado"]);
+  assert.deepEqual(analiza("Voy a matar al rey"), ["matar:verbo:futuro", "a:prep", "el:det", "rey:nombre"]);
+  assert.deepEqual(analiza("Ellos dijeron la verdad"), ["ellos:pron", "decir:verbo:pasado", "el:det", "verdad:nombre"]);
+  assert.deepEqual(analiza("La niña cuenta una historia"), ["el:det", "niña:nombre", "contar:verbo", "un:det", "historia:nombre"]);
+
+  assert.deepEqual(analiza("Cuando el sol salga iremos al mar"), ["cuando:conj", "el:det", "sol:nombre", "salir:verbo:subjuntivo", "ir:verbo:futuro", "a:prep", "el:det", "mar:nombre"]);
+  assert.deepEqual(analiza("Ella puede ver las estrellas"), ["ella:pron", "poder:verbo", "ver:verbo", "el:det", "estrella:nombre:plural"]);
+  assert.deepEqual(analiza("El niño perdió su espada"), ["el:det", "niño:nombre", "perder:verbo:pasado", "su:det", "espada:nombre"]);
+  assert.deepEqual(analiza("No quiere que vuelvas"), ["no:neg", "querer:verbo", "que:conj", "volver:verbo:subjuntivo"]);
+
+  const af = (rasgo: import("./idiomas/logica.ts").Rasgo, forma: string, tipo: "sufijo" | "prefijo" = "sufijo") => ({ id: rasgo, nombre: rasgo, rasgo, tipo, forma, clase: "verbo" as const });
+  const fija = (significado: string, palabra: string) => ({ id: significado, significado, palabra, clase: "otro" as const });
+  i = { ...i, orden: "SOV", adjetivo: "antes", articulos: false, afijos: [af("plural", "-i"), af("pasado", "ka-", "prefijo"), af("3s", "-t"), af("1s", "-m")], lexico: [fija("rey", "azor"), fija("ver", "mor"), fija("dragón", "zul"), fija("rojo", "pyr"), fija("no", "ny"), fija("yo", "ao")] };
+  const di = (f: string, extra: Partial<import("./idiomas/logica.ts").Idioma> = {}, dialecto?: string) => tr.traducir({ ...i, ...extra }, f, { lang: "es", base, lexico: lex, nombres: new Set(["lucas"]), dialecto }).texto;
+  assert.equal(di("El rey vio los dragones rojos."), "Azor pyr zuli kamort.", "reordena a SOV, quita artículos, pone plural, pasado y persona");
+  assert.equal(di("El rey vio los dragones rojos.", { orden: "VSO", adjetivo: "después" }), "Kamort azor zuli pyr.");
+  assert.equal(di("Yo no veo al rey.", {}, "z > s"), "Ao " + l.cambiar(i, lex.get("a")!, "z > s") + " asor ny morm.");
+  assert.ok(di("Lucas vio un dragón.").startsWith("Lucas zul"), "los nombres propios se quedan");
+  assert.ok(!di("Xqzt vio blorg.").includes("["), "ninguna palabra queda sin traducir");
+
+  const en = leerBase(leer("dictionary-en/index.aff"), leer("dictionary-en/index.dic"), "en");
+  assert.deepEqual(tr.analizar("The king will see two red dragons", en, "en").map((x) => `${x.lema}:${x.tipo}${x.rasgos.length ? ":" + x.rasgos.join("+") : ""}`), ["the:det", "king:nombre", "see:verbo:futuro", "two:det", "red:adj", "dragon:nombre:plural"]);
+
+  const comp = l.completarGramatica(l.nuevoIdioma("2", "Otro"), Object.fromEntries(l.RASGOS.map((r) => [r, r])) as Record<import("./idiomas/logica.ts").Rasgo, string>, () => "x");
+  assert.equal(comp.length, l.RASGOS.length);
+  assert.equal(new Set(comp.map((a) => a.forma.replace(/-/g, ""))).size, comp.length, "afijos distintos");
+  assert.equal(l.cambiar(i, "kaki", "k > ch / _i"), "kachi");
+  assert.equal(l.cambiar(i, "pata", "t > d / V_V\nV > 0 / C_#"), "pad");
+  assert.equal(l.cambiar(i, "a", "a > 0"), "a", "nunca vacía una palabra");
+  assert.ok(l.dialectoAlAzar(i, l.azarDe("d")).split("\n").length >= 3);
+  assert.deepEqual(l.enSonidos(i, "rhae"), ["rh", "ae"], "primero los sonidos largos");
+  assert.match(l.glifo(i, "a"), /^M\d+ \d+([LQ][\d ]+)+$/);
+  assert.ok(l.alfabetoSvg({ ...i, glifos: { a: "M0 0L1 1" } }).includes('d="M0 0L1 1"'));
+
+  const m = await import("./magia/logica.ts");
+  const s = m.nuevoSistema("1", "Sangre", "sencillo");
+  assert.deepEqual(m.revisar(s).map((a) => a.tipo), ["sinFuente", "sinCoste", "sinLimites"]);
+  const c = { ...s, nivel: "complejo" as const, dureza: 80, fuente: "x", coste: "y", limites: "z", debilidades: "w", escuelas: [{ id: "e", nombre: "Hierro", descripcion: "" }], hechizos: [{ id: "h", nombre: "Filo", escuela: "", rango: "", efecto: "", coste: "" }] };
+  assert.deepEqual(m.revisar(c).map((a) => a.tipo), ["sinReglas", "hechizoSinCoste", "escuelaVacia"]);
+  const idea = m.idea({ ...s, coste: "mío" }, true, () => 0);
+  assert.ok(!("coste" in idea) && idea.fuente, "la idea al azar no pisa lo escrito");
+  console.log("idiomas y magia ok");
 }

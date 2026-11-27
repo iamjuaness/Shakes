@@ -2,7 +2,7 @@
   "shakes": 1,
   "id": "guion",
   "name": "Guion",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Escribe guiones de cine o serie por escenas: encabezado, acción, personaje, acotación, diálogo y transición con Tab e Intro; desglose de escenas y reparto, minutos aproximados y exportación a Fountain y PDF con formato de industria.",
   "tool": "guion",
   "main": "main.js"

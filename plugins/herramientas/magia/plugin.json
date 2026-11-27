@@ -1,0 +1,9 @@
+{
+  "shakes": 1,
+  "id": "magia",
+  "name": "Sistemas de magia",
+  "version": "1.0.0",
+  "description": "Diseña sistemas de magia sencillos o complejos: fuente, coste, límites, reglas, escuelas, hechizos, rangos, usuarios y avisos de coherencia.",
+  "tool": "magia",
+  "main": "main.js"
+}

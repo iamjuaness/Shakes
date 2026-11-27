@@ -6,7 +6,8 @@ export const obsidianSync: ToolPlugin = {
   id: "obsidian-sync",
   name: "Sincronizar con Obsidian",
   actions: [{
-    label: "Volcar fichas a una carpeta (Obsidian)…",
+    label: "Fichas a Obsidian (carpeta)…",
+    exporta: true,
     async run(host) {
       const pick = (window as any).showDirectoryPicker;
       if (!pick) return host.notify("⚠ Este navegador no permite elegir carpetas.");
