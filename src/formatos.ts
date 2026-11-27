@@ -1,9 +1,9 @@
 // Puro: Fountain y LaTeX a partir del libro, la saga o el universo. (HTML y PDF salen del exportador de la app.)
 // Los niveles son relativos a la raíz exportada: un libro suelto empieza en partes; una saga, en libros; un universo, en sagas.
 // Los metadatos (autor, año, sinopsis) salen en la portada; la imagen de portada no cabe en estos formatos de texto.
-import { conTexto, level, lineaMeta } from "../../../src/tree.ts";
-import type { Node } from "../../../src/tree.ts";
-import { paras } from "../_comun/texto.ts";
+import { conTexto, level, lineaMeta } from "./tree.ts";
+import type { Node } from "./tree.ts";
+import { paras } from "../plugins/herramientas/_comun/texto.ts";
 
 export function toFountain(root: Node): string {
   const rel = (n: Node) => level[n.kind] - level[root.kind];

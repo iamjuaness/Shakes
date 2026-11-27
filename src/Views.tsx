@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
-import type { PointerEvent } from "react";
+import { useMemo, useState } from "react";
 import { CARD_TYPES, CHAR_LONG, CHAR_SHORT, Card, CardType, Node, Project, Style, analyze, chronological, countWords, dialogueShare, diffVersions, esObra, mentions, plainText, scenes, search, today, writtenOn } from "./tree";
 import { ask, confirmAsk } from "./dialog";
 import { t } from "./i18n";
+import { curve, layout } from "./mapLayout";
+import { BotonesZoom, COLORES, PERSONA, useLienzo } from "../plugins/herramientas/_comun/lienzo";
 
 // ---------- Línea de tiempo ----------
 export function Timeline({ book, onSelect, onDate }: { book: Node; onSelect: (id: string) => void; onDate: (id: string, date: string) => void }) {
@@ -31,34 +32,64 @@ export function Timeline({ book, onSelect, onDate }: { book: Node; onSelect: (id
   );
 }
 
-// ---------- Mapa de relaciones (nodos arrastrables, relaciones con flecha) ----------
+// ---------- Mapa de conexiones entre fichas (orden automático, zoom, nodos arrastrables, relaciones curvas con flecha) ----------
 interface Drag { id: string; ox: number; oy: number; px: number; py: number; x: number; y: number }
+// icono de cada tipo de ficha, dibujado en una caja de 24×24
+const ICONS: Record<CardType, string> = {
+  character: PERSONA,
+  place: "M12 2 1 12h3v10h6v-6h4v6h6V12h3z",
+  object: "M12 2l9 4.500-9 4.500-9-4.500zM2 8.500l9 4.500v9l-9-4.500zM22 8.500l-9 4.500v9l9-4.500z",
+  faction: "M12 1 3 5v6c0 6 4 10 9 12 5-2 9-6 9-12V5z",
+};
 
-export function RelationMap({ cards, onSelect, onMove }: { cards: Card[]; onSelect: (id: string) => void; onMove: (id: string, x: number, y: number) => void }) {
-  const svg = useRef<SVGSVGElement>(null);
+export function RelationMap({ cards, onSelect, onMove, onReorder }: { cards: Card[]; onSelect: (id: string) => void; onMove: (id: string, x: number, y: number) => void; onReorder: () => void }) {
   const [drag, setDrag] = useState<Drag | null>(null);
-  const R = 190, C = 250, r = 24;
-  const base = (c: Card, i: number) => {
-    if (c.x !== undefined && c.y !== undefined) return { x: c.x, y: c.y };
-    const a = (2 * Math.PI * i) / cards.length - Math.PI / 2;
-    return { x: C + R * Math.cos(a), y: C + R * Math.sin(a) };
-  };
-  const pos = new Map(cards.map((c, i) => [c.id, drag?.id === c.id ? { x: drag.x, y: drag.y } : base(c, i)]));
-  const pt = (e: PointerEvent) => {
-    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.current!.getScreenCTM()!.inverse());
-    return { x: p.x, y: p.y };
-  };
-  const clamp = (v: number) => Math.min(475, Math.max(25, v));
+  const [hover, setHover] = useState<string | null>(null);
+  const auto = useMemo(() => layout(cards.map((c) => c.id), cards.flatMap((c) => (c.links ?? []).map((l): [string, string] => [c.id, l.to]))), [cards]);
+  const placed = new Map(cards.map((c) => [c.id, c.x !== undefined && c.y !== undefined ? { x: c.x, y: c.y } : auto.get(c.id)!]));
+  const pos = drag ? new Map(placed).set(drag.id, { x: drag.x, y: drag.y }) : placed;
+  const links = cards.flatMap((c) => (c.links ?? []).filter((l) => l.to !== c.id && placed.has(l.to)).map((l) => ({ from: c, to: l.to, text: l.label, pair: [c.id, l.to].sort().join() })));
+  // cuantas más conexiones, más grande el nodo
+  const degree = new Map<string, number>();
+  for (const l of links) for (const id of [l.from.id, l.to]) degree.set(id, (degree.get(id) ?? 0) + 1);
+  const most = Math.max(1, ...degree.values());
+  const radius = (id: string) => 20 + (16 * (degree.get(id) ?? 0)) / most;
+  // misma relación, mismo color: así se distinguen las de una misma pareja
+  const kinds = [...new Set(links.map((l) => l.text.trim().toLowerCase()))];
+  const edges = links.flatMap((l, k) => {
+    const same = links.filter((o) => o.pair === l.pair);
+    const g = curve(pos.get(l.from.id)!, pos.get(l.to)!, same.indexOf(l), same.length, l.from.id > l.to, Math.max(...same.map((o) => o.text.length)) * 7 + 12, radius(l.from.id), radius(l.to));
+    const color = kinds.indexOf(l.text.trim().toLowerCase()) % COLORES.length;
+    return g ? [{ ...l, ...g, color, key: k, dim: !!hover && hover !== l.from.id && hover !== l.to }] : [];
+  });
+  const near = new Set(links.flatMap((l) => (l.from.id === hover ? [l.to] : l.to === hover ? [l.from.id] : [])).concat(hover ?? []));
+  // el encuadre se calcula sin el arrastre en curso, para que no se mueva bajo el cursor
+  const xs = [...placed.values()].map((p) => p.x), ys = [...placed.values()].map((p) => p.y);
+  const w = Math.max(600, Math.max(...xs) - Math.min(...xs) + 200), h = Math.max(450, Math.max(...ys) - Math.min(...ys) + 200);
+  const fit = { x: (Math.max(...xs) + Math.min(...xs) - w) / 2, y: (Math.max(...ys) + Math.min(...ys) - h) / 2, w, h };
+  const lienzo = useLienzo(fit, !!cards.length);
+  const pt = lienzo.point, svg = lienzo.svg;
   if (!cards.length) return <p className="empty">{t("map.empty")}</p>;
   return (
     <>
-      <p className="muted hint">{t("map.hint")}</p>
+      <div className="row hint">
+        <span className="muted">{t("map.hint")}</span>
+        <BotonesZoom lienzo={lienzo} />
+        {cards.some((c) => c.x !== undefined) && <button onClick={onReorder}>{t("map.reorder")}</button>}
+      </div>
       <svg
         ref={svg}
         className="map"
-        viewBox="0 0 500 500"
-        onPointerMove={(e) => { if (drag) { const p = pt(e); setDrag({ ...drag, x: clamp(p.x + drag.ox), y: clamp(p.y + drag.oy) }); } }}
+        aria-label={t("map.title")}
+        viewBox={lienzo.viewBox}
+        onPointerDown={lienzo.panStart} // arrastrar el fondo desplaza el mapa
+        onPointerMove={(e) => {
+          if (drag) { const p = pt(e); setDrag({ ...drag, x: p.x + drag.ox, y: p.y + drag.oy }); }
+          lienzo.panMove(e);
+        }}
+        onPointerCancel={() => { lienzo.panEnd(); setDrag(null); }}
         onPointerUp={() => {
+          lienzo.panEnd();
           if (!drag) return;
           if (Math.hypot(drag.x - (drag.px + drag.ox), drag.y - (drag.py + drag.oy)) > 4) onMove(drag.id, Math.round(drag.x), Math.round(drag.y));
           else onSelect(drag.id);
@@ -66,40 +97,45 @@ export function RelationMap({ cards, onSelect, onMove }: { cards: Card[]; onSele
         }}
       >
         <defs>
-          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0 0L10 5L0 10z" fill="var(--muted)" />
-          </marker>
+          {COLORES.map((color, i) => (
+            <marker key={color} id={`arrow${i}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0 0L10 5L0 10z" fill={color} />
+            </marker>
+          ))}
         </defs>
-        {cards.flatMap((c) => (c.links ?? []).map((l, i) => {
-          const a = pos.get(c.id)!, b = pos.get(l.to);
-          if (!b) return null;
-          const len = Math.hypot(b.x - a.x, b.y - a.y);
-          if (len < 2 * r) return null;
-          const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
-          return (
-            <g key={c.id + l.to + i}>
-              <line x1={a.x + ux * r} y1={a.y + uy * r} x2={b.x - ux * (r + 2)} y2={b.y - uy * (r + 2)} stroke="var(--muted)" markerEnd="url(#arrow)" />
-              <text className="edge" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4} textAnchor="middle">{l.label}</text>
-            </g>
-          );
-        }))}
+        {edges.map((e) => (
+          <path key={e.key} className={`link ${e.dim ? "dim" : ""}`} d={e.path} stroke={COLORES[e.color]} markerEnd={`url(#arrow${e.color})`}>
+            <title>{`${e.from.name} → ${e.text} → ${cards.find((c) => c.id === e.to)!.name}`}</title>
+          </path>
+        ))}
         {cards.map((c) => {
-          const p = pos.get(c.id)!;
+          const p = pos.get(c.id)!, r = radius(c.id);
           return (
             <g
               key={c.id}
-              className="node"
+              className={`node ${hover && !near.has(c.id) ? "dim" : ""}`}
+              onPointerEnter={() => setHover(c.id)}
+              onPointerLeave={() => setHover(null)}
               onPointerDown={(e) => {
+                e.stopPropagation();
                 const s = pt(e);
                 setDrag({ id: c.id, ox: p.x - s.x, oy: p.y - s.y, px: s.x, py: s.y, x: p.x, y: p.y });
                 try { svg.current!.setPointerCapture(e.pointerId); } catch {} // sigue el arrastre fuera del nodo
               }}
             >
-              <circle cx={p.x} cy={p.y} r={r} fill="var(--accent)" />
-              <text className="name" x={p.x} y={p.y + r + 14} textAnchor="middle">{c.name}</text>
+              <circle cx={p.x} cy={p.y} r={r} fill="var(--bg)" />
+              <path d={ICONS[c.type]} transform={`translate(${p.x - r} ${p.y - r}) scale(${r / 12})`} fill="var(--accent)">
+                <title>{t(`type.${c.type}`)}</title>
+              </path>
+              <text className="name" x={p.x} y={p.y + r + 17} textAnchor="middle">{c.name}</text>
             </g>
           );
         })}
+        {edges.map((e) => (
+          <text key={e.key} className={`edge ${e.dim ? "dim" : ""}`} x={e.label.x} y={e.label.y + 4} textAnchor="middle" fill={COLORES[e.color]}>
+            {e.text}
+          </text>
+        ))}
       </svg>
     </>
   );

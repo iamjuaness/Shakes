@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, Extension, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Card, Formato, Node, Project, templates, addChild, books, conTexto, formatoDe, esContenedor, esObra, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, remove, replaceAll, restore, search, shift, snapshot, today, totalWords, update, wrapIn, writtenOn } from "./tree";
+import { CARD_TYPES, Card, Formato, Node, Project, templates, addChild, books, conTexto, formatoDe, esContenedor, esObra, applyTemplate, bookOf, countWords, find, firstScene, logWords, mentions, move, remove, replaceAll, restore, search, shift, snapshot, today, totalWords, update, wrapIn, writtenOn } from "./tree";
 import { Analysis, CardForm, Corkboard, RelationMap, SearchPanel, Timeline, Versions } from "./Views";
 import Tree from "./TreeView";
 import { BookMeta } from "./BookMeta";
@@ -12,8 +12,10 @@ import { PluginsPanel } from "./PluginsPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import { isDark, saveSettings, useSettings } from "./settings";
 import { Ribbon } from "./Ribbon";
+import { ToolBar } from "./ToolBar";
 import { canSavePick, pickProject, saveProjectAs, writeProject } from "./fileio";
 import { ExportKind, exportAs } from "./exporting";
+import { importDoc } from "./importing";
 import { compareVersions, type Update } from "./update";
 import { Key, t, tr } from "./i18n";
 import { SPELL_LANGS, langName, ortografia } from "./spell";
@@ -184,8 +186,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     ...plug.plugins.filter((p) => p.code && !TOOLS.some((x) => x.id === p.tool)).flatMap((p) => loadTool(p) ?? []),
   ];
   const toolName = (x: ToolPlugin) => tr("tool." + x.id, x.name);
-  const tabs = TABS.map((k) => ({ id: k as string, label: t(`tab.${k}`) }));
-  const more = [...tools.filter((x) => x.Panel).map((x) => ({ id: x.id, label: toolName(x) })), { id: "plugins", label: t("tab.plugins") }]; // herramientas con panel y Plugins van en «Más»
+  const tabs = [...TABS, "plugins" as const].map((k) => ({ id: k as string, label: t(`tab.${k}`) }));
   const ToolPanel = tools.find((x) => x.id === tab)?.Panel;
 
   function load(p: Project, name: string) {
@@ -318,10 +319,10 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
     <div className={`app ${focus ? "focus" : ""} ${settings.quiet ? "quiet" : ""}`} style={{ "--editor-size": settings.fontSize + "px", "--editor-width": settings.width + "px" } as React.CSSProperties}>
       <DialogHost />
       <Ribbon
-        tabs={tabs} more={more} tab={tab} onTab={(id) => { setTab(id); if (id === "map") setCardId(null); }}
+        tabs={tabs} tab={tab} onTab={(id) => { setTab(id); if (id === "map") setCardId(null); }}
         book={book} scope={scope} current={current} ambito={ambito} onAmbito={() => setAmbito(ambito === "libro" ? "todo" : "libro")}
         goal={goal} onGoal={(n) => setProject((p) => ({ ...p, goal: n }))} onConvert={convertir}
-        onNew={onNew} onOpen={openFile} onSave={saveNow} onSaveAs={saveAs} onClose={cerrar} onExport={(k: ExportKind) => exportAs(k, scope, bookLang).then((n) => { if (n) setStatus(t("st.exported", { n })); }, () => setWarn(t("w.export")))}
+        onNew={onNew} onOpen={openFile} onSave={saveNow} onSaveAs={saveAs} onClose={cerrar} onImport={(k) => void importDoc(k, host)} onExport={(k: ExportKind) => exportAs(k, scope, bookLang).then((n) => { if (n) setStatus(t("st.exported", { n })); }, () => setWarn(t("w.export")))}
         onStructure={addTemplate} onSceneTpl={sceneTpls.length > 0 ? addSceneTemplate : undefined}
         onAddCard={() => host.addCard({ id: crypto.randomUUID(), type: "character", name: t("card.new"), notes: "" })}
         onScene={(patch) => current && setBook((b) => update(b, current.id, (n) => ({ ...n, ...patch })))}
@@ -358,15 +359,23 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
               setCards((cs) => [...cs, c]);
               setCardId(c.id);
             }}>{t("ins.card")}</button>
-            <ul>
-              {cards.map((c) => (
-                <li key={c.id}>
-                  <div className={`item ${c.id === cardId ? "active" : ""}`} onClick={() => setCardId(c.id)}>
-                    <span className="label">{c.name}</span><span className="muted">{t(`type.${c.type}`)}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {CARD_TYPES.map((type) => {
+              const group = cards.filter((c) => c.type === type);
+              return group.length > 0 && (
+                <section key={type}>
+                  <h3>{t(`types.${type}`)}</h3>
+                  <ul>
+                    {group.map((c) => (
+                      <li key={c.id}>
+                        <div className={`item ${c.id === cardId ? "active" : ""}`} onClick={() => setCardId(c.id)}>
+                          <span className="label">{c.name}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
           </div>
         )}
         {goal > 0 && <footer><progress value={Math.min(words, goal)} max={goal} /></footer>}
@@ -374,7 +383,8 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
 
       <main className="main">
         <header className="toolbar">
-          {tab === "cards" || tab === "map" || !current ? <span className="title">{card?.name}</span>
+          {ToolPanel ? <span className="title">{toolName(tools.find((x) => x.id === tab)!)}</span>
+            : tab === "cards" || tab === "map" || !current ? <span className="title">{card?.name ?? (tab === "map" ? t("map.title") : "")}</span>
             : <input className="title" aria-label={t("title.rename")} title={t("title.rename")} value={current.title} onChange={(e) => setBook((b) => update(b, current.id, (n) => ({ ...n, title: e.target.value })))} />}
         </header>
 
@@ -401,7 +411,8 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
             onDelete={(id) => setProject((p) => ({ ...p, versions: p.versions.filter((v) => v.id !== id) }))}
           />
         ) : tab === "map" && !card ? (
-          <RelationMap cards={cards} onSelect={setCardId} onMove={(id, x, y) => patchCard(id, { x, y })} />
+          <RelationMap cards={cards} onSelect={setCardId} onMove={(id, x, y) => patchCard(id, { x, y })}
+            onReorder={async () => { if (await confirmAsk(t("d.reorderMap"))) setCards((cs) => cs.map(({ x, y, ...c }) => c)); }} />
         ) : tab === "cards" || tab === "map" ? (
           card ? (
             <CardForm
@@ -456,6 +467,7 @@ export default function App({ initial, handle: savedHandle, granted, onNew, onCl
           <span>{t("st.words", { n: words })}{goal > 0 && t("st.pct", { n: Math.round((words / goal) * 100) })}</span>
         </div>
       </main>
+      <ToolBar tools={tools} name={toolName} tab={tab} onTab={setTab} host={host} />
       </div>
     </div>
   );

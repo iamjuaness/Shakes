@@ -7,7 +7,7 @@ import { dirname, join, relative, resolve } from "node:path";
 const root = resolve("plugins/herramientas");
 const srcDir = resolve("src");
 // Lo que Shakes presta a los plugins (igual que MODS en src/extTools.ts); el resto se empaqueta dentro del plugin.
-const SHAKES_MODULES = ["tree", "dialog", "i18n", "export"];
+const SHAKES_MODULES = ["tree", "dialog", "i18n", "export", "spell"];
 const EXTERNAL = [/^react(\/.*)?$/, /^@tiptap\/(react|pm\/state|pm\/view)$/, /^fflate$/];
 
 const shakesSrc = {

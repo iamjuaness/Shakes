@@ -2,8 +2,8 @@
   "shakes": 1,
   "id": "tramas",
   "name": "Tramas",
-  "version": "1.0.0",
-  "description": "Tablero de tramas y subtramas por color, escena a escena.",
+  "version": "2.0.0",
+  "description": "Línea de tiempo de tramas y subtramas: qué pasa en cada capítulo, fases y avisos de tramas sin resolver.",
   "tool": "tramas",
   "main": "main.js"
 }

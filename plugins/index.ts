@@ -16,9 +16,9 @@ export const catalog: Plugin[] = Object.entries(import.meta.glob("./**/*.json", 
 
 export const TOOLS: ToolPlugin[] = [];
 // Plugins que dejaron de existir porque su función pasó al núcleo: se quitan de las instalaciones antiguas.
-export const RETIRED = ["ortografia-es", "ortografia-en"];
+export const RETIRED = ["ortografia-es", "ortografia-en", "importar", "exportar-extra"];
 
 // Se instalan solos la primera vez que se abre Shakes; el resto lo elige el usuario en la pestaña Plugins.
-export const ESSENTIAL = ["fichas-auto", "dialogo-auto", "repeticiones", "notas-margen", "importar", "exportar-extra", "estructura-vogler", "taller-creativo"];
+export const ESSENTIAL = ["fichas-auto", "dialogo-auto", "repeticiones", "notas-margen", "estructura-vogler", "taller-creativo"];
 // Esenciales añadidos después: se instalan una vez también en las instalaciones existentes (luego el usuario manda).
 export const ESSENTIAL_NEW = ["taller-creativo"];

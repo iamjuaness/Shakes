@@ -5,7 +5,7 @@ Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lis
 - `temas/*.json`, `estructuras/*.json`: solo datos.
 - `herramientas/<id>/`: código + `plugin.json` con `"tool": "<id>"`. Contrato en `herramientas/types.ts`.
   - **Incluidas en la app** (solo ortografía, por sus diccionarios): registro en `index.ts`.
-  - **Externas** (se instalan sin actualizar la app): `plugin.json` con `"main": "main.js"`, sin registrar en `index.ts`. Compila con `npm run plugins` y sube `main.js` junto al manifiesto. Puede importar `react`, `@tiptap/react`, `@tiptap/pm/state|view` y `src/{tree,dialog,i18n}` (los presta Shakes); lo demás se empaqueta dentro. Debe exportar la herramienta (`export default` o export con `id` igual a `tool`).
+  - **Externas** (se instalan sin actualizar la app): `plugin.json` con `"main": "main.js"`, sin registrar en `index.ts`. Compila con `npm run plugins` y sube `main.js` junto al manifiesto. Puede importar `react`, `@tiptap/react`, `@tiptap/pm/state|view` y `src/{spell,tree,dialog,i18n}` (los presta Shakes); lo demás se empaqueta dentro. Debe exportar la herramienta (`export default` o export con `id` igual a `tool`).
 
 ## Temas
 | Archivo | Plugin |
@@ -32,17 +32,17 @@ Todo plugin de Shakes vive aquí. Se instalan desde la pestaña **Plugins** (lis
 | `notas-laterales` | Panel derecho con un .md/.txt de notas previas | Editor |
 | `sesion-pomodoro` | Temporizador 25/5 y palabras de la sesión | Editor |
 | `maquina-escribir` | Línea de escritura centrada | Editor |
-| `inconsistencias` | Ficha vs escenas (ojos, pelo, edad) | Pestaña |
-| `arcos-personaje` | Presencia de personajes por escena | Pestaña |
-| `mapa-lugares` | Imagen de mapa con lugares | Pestaña |
-| `arbol-genealogico` | Generaciones desde relaciones | Pestaña |
-| `calendario` | Escenas por fecha | Pestaña |
-| `tramas` | Tramas y subtramas por escena | Pestaña |
-| `generador-nombres` | Nombres por cultura → ficha | Menú Herramientas |
-| `importar` | Markdown, texto y .docx | Menú Herramientas |
-| `exportar-extra` | Fountain, LaTeX, HTML | Menú Herramientas |
-| `manuscrito-editorial` | Formato estándar para editoriales (PDF) | Menú Herramientas |
-| `obsidian-sync` | Fichas → notas `.md` | Menú Herramientas |
-| `resumen-escenas` | Rellena sinopsis vacías | Menú Herramientas |
+| `inconsistencias` | Ficha vs escenas (ojos, pelo, edad) | Barra derecha |
+| `arcos-personaje` | Arco de cada personaje: momentos, curva y presencia | Barra derecha |
+| `mapa-lugares` | Imagen de mapa con lugares | Barra derecha |
+| `arbol-genealogico` | Generaciones desde relaciones | Barra derecha |
+| `calendario` | Escenas por fecha | Barra derecha |
+| `idiomas` | Idiomas inventados: sonidos, diccionario, gramática y traductor | Barra derecha |
+| `magia` | Sistemas de magia sencillos y complejos | Barra derecha |
+| `tramas` | Línea de tiempo de tramas y subtramas | Barra derecha |
+| `generador-nombres` | Nombres por cultura → ficha | Barra derecha |
+| `manuscrito-editorial` | Formato estándar para editoriales (PDF) | Archivo › Exportar a |
+| `obsidian-sync` | Fichas → notas `.md` | Archivo › Exportar a |
+| `resumen-escenas` | Rellena sinopsis vacías | Barra derecha |
 
 Tests: `node plugins/herramientas/herramientas.test.ts` y `node plugins/herramientas/fichas-auto/detect.test.ts`.

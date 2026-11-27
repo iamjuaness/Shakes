@@ -4,6 +4,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). C
 
 ## [Sin publicar]
 
+## [0.9.0] - 2026-11-27
+### Añadido
+- Plugin **Creador de idiomas**: un idioma completo a partir del idioma del libro (una palabra para cada palabra de su diccionario), sonidos y estilos de partida, gramática con plurales, tiempos y personas, traductor que conjuga y reordena (español e inglés), letras propias dibujables, dialectos por cambios de sonido y cultura.
+- Plugin **Sistemas de magia**: modo sencillo y complejo, escala de magia blanda a dura, reglas, escuelas, hechizos, rangos, personajes usuarios, avisos de coherencia e ideas al azar.
+### Cambiado
+- Las fichas se listan agrupadas por tipo (Personajes, Lugares, Objetos, Facciones).
+- Mapa de relaciones: orden automático que separa los grupos y evita cruces, líneas curvas, un color por tipo de relación (dos relaciones entre las mismas fichas se ven por separado), resaltado al pasar el cursor y botón «Reordenar».
+- La pestaña «Mapa» pasa a llamarse «Conexiones» (mapa de conexiones entre personajes). Se puede acercar, alejar y desplazar, y las fichas con más conexiones se ven más grandes.
+- En el mapa de conexiones cada tipo de ficha tiene su icono: persona, casa (lugar), cubo (objeto) y escudo (facción).
+- Todas las exportaciones, incluidas las de los plugins, están en Archivo › Exportar a.
+- Las herramientas de los plugins pasan a una barra vertical a la derecha, cada una con su icono. Desaparecen los menús «Herramientas ▾» y «Más ▾»; Plugins es una pestaña. Las que solo actúan mientras escribes no salen en la barra.
+- Importar (Markdown, texto y Word) y exportar a HTML, LaTeX y Fountain vienen en la app, en Archivo; los plugins «Importar» y «Exportar extra» desaparecen.
+- Árbol genealógico rehecho: iconos de persona, generaciones ordenadas (abuelos, padres, hijos), parejas juntas, hijos bajo sus padres, familias separadas en recuadros y zoom.
+- El árbol genealógico admite bucles (viajes en el tiempo): la relación que cierra el bucle se dibuja aparte, en rojo punteado y marcada como «paradoja».
+- **Arcos de personaje** rehecho: tipo de arco, mentira, defecto y arco de la ficha, seis momentos clave con capítulo, nota y estado, curva de cambio, presencia por capítulo y avisos.
+- **Tramas** rehecho: línea de tiempo con un carril por trama y zoom, descripción, tipo y personajes, nota y fase en cada capítulo, avisos de tramas abandonadas o sin resolver y confirmación al borrar. Se conservan las marcas anteriores.
+
 ## [0.8.0] - 2026-11-26
 ### Añadido
 - **Web de Shakes** (`docs/`, GitHub Pages): descarga de la última versión directamente desde las releases y tutoriales de uso (primer proyecto, escribir cómodo, corrector, fichas, Taller creativo, guiones, exportar, atajos y problemas frecuentes).

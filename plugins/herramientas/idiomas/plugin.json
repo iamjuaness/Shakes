@@ -1,0 +1,9 @@
+{
+  "shakes": 1,
+  "id": "idiomas",
+  "name": "Creador de idiomas",
+  "version": "2.0.0",
+  "description": "Crea un idioma completo a partir del idioma del libro: sonidos, diccionario entero, gramática, traductor que conjuga y reordena, letras propias, dialectos y cultura.",
+  "tool": "idiomas",
+  "main": "main.js"
+}

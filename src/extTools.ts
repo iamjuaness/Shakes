@@ -9,6 +9,7 @@ import * as tree from "./tree";
 import * as dialog from "./dialog";
 import * as i18n from "./i18n";
 import * as exporting from "./export";
+import * as spell from "./spell";
 import * as fflate from "fflate";
 import { evalCjs } from "./cjs";
 import type { Plugin } from "./plugins";
@@ -17,7 +18,7 @@ import type { ToolPlugin } from "./pluginApi";
 // Si cambia esta lista, actualiza también SHAKES_MODULES en scripts/build-plugins.mjs.
 const MODS: Record<string, unknown> = {
   react: React, "react/jsx-runtime": jsx, "@tiptap/react": tiptapReact, "@tiptap/pm/state": pmState, "@tiptap/pm/view": pmView,
-  "shakes/tree": tree, "shakes/dialog": dialog, "shakes/i18n": i18n, "shakes/export": exporting, fflate,
+  "shakes/tree": tree, "shakes/dialog": dialog, "shakes/i18n": i18n, "shakes/export": exporting, "shakes/spell": spell, fflate,
 };
 
 const cache = new Map<string, ToolPlugin | null>(); // identidad estable: React no remonta el panel en cada render

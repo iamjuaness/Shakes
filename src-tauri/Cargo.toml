@@ -1,6 +1,6 @@
 [package]
 name = "shakes"
-version = "0.8.0"
+version = "0.9.0"
 description = "Shakes: herramienta de escritura de historias"
 authors = ["iamjuaness"]
 license = "GPL-3.0-only"

@@ -4,6 +4,7 @@ import { Plugin, PluginState, install, parsePlugin, uninstall } from "./plugins"
 import { fetchCode, fetchRemote } from "./remote";
 import { loadTool } from "./extTools";
 import { confirmAsk } from "./dialog";
+import { RETIRED } from "../plugins/index";
 import { t } from "./i18n";
 import type { ToolPlugin } from "../plugins/herramientas/types";
 
@@ -16,7 +17,7 @@ export function PluginsPanel({ state, onChange, onMsg, tools, catalog }: { state
   const [q, setQ] = useState("");
   const [remote, setRemote] = useState<Plugin[]>([]);
   const [net, setNet] = useState<"cargando" | "ok" | string>("cargando");
-  const load = () => { setNet("cargando"); fetchRemote().then((r) => { setRemote(r); setNet("ok"); }).catch((e) => setNet(String(e?.message ?? e))); };
+  const load = () => { setNet("cargando"); fetchRemote().then((r) => { setRemote(r.filter((p) => !RETIRED.includes(p.id))); setNet("ok"); }).catch((e) => setNet(String(e?.message ?? e))); };
   useEffect(load, []);
 
   async function add(raw: Plugin) {

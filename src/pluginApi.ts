@@ -27,5 +27,7 @@ export interface ToolPlugin {
   refresh?: (editor: Editor) => void; // el host lo llama cuando cambian las fichas
   Overlay?: ComponentType<{ editor: Editor; host: ToolHost }>; // UI junto al editor (paneles, modales, listas)
   Panel?: ComponentType<{ host: ToolHost }>; // pestaña propia (con el nombre de la herramienta)
-  actions?: { label: string; run: (host: ToolHost) => unknown }[]; // botones del menú «Herramientas» de la cinta
+  // `exporta`: la acción sale en Archivo › Exportar a; las demás, en el menú de la herramienta en la barra derecha.
+  actions?: { label: string; exporta?: boolean; run: (host: ToolHost) => unknown }[];
+  icon?: string; // trazo SVG en una caja de 24×24 para la barra derecha (si falta, uno genérico)
 }
